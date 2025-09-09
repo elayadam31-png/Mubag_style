@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mubag Style - Zərif Çantalar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background-color: #f7f5f2;
+            color: #333;
+            line-height: 1.6;
+        }
+        .text-cream { color: #f7f5f2; }
+        .bg-cream { background-color: #f7f5f2; }
+        .shadow-soft { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0, 0, 0, 0.05); }
+        .page-content {
+            display: none;
+            padding: 2rem 1rem;
+        }
+        .page-content.active {
+            display: block;
+        }
+        .product-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            object-position: center;
+        }
+        @media (min-width: 768px) {
+            .page-content {
+                padding: 4rem 2rem;
+            }
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background-color: #000;
+            color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:hover {
+            background-color: #333;
+        }
+        .discounted-price {
+            text-decoration: line-through;
+            color: #a0a0a0;
+            margin-right: 8px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 12px;
+            position: relative;
+        }
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            background-color: #f0e6e4;
+            color: #333;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background-color: #d1b8a5;
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="bg-cream">
+    <!-- Header -->
+    <header class="bg-white shadow-soft rounded-b-xl p-4 md:p-6 mb-8 sticky top-0 z-50">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between">
+            <h1 class="text-3xl md:text-4xl font-bold tracking-wide mb-4 md:mb-0">Mubag Style</h1>
+            <nav class="flex items-center space-x-4 md:space-x-8 text-base md:text-xl font-medium">
+                <ul class="flex space-x-4 md:space-x-8">
+                    <li><a href="#home" class="page-link hover:text-gray-600 transition-colors">Ana Səhifə</a></li>
+                    <li><a href="#products" class="page-link hover:text-gray-600 transition-colors">Məhsullar</a></li>
+                    <li><a href="#about" class="page-link hover:text-gray-600 transition-colors">Haqqımızda</a></li>
+                    <li><a href="#contact" class="page-link hover:text-gray-600 transition-colors">Əlaqə</a></li>
+                    <li><a href="#admin" class="page-link hover:text-gray-600 transition-colors">Admin</a></li>
+                </ul>
+                <div class="relative cursor-pointer" id="cart-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-700 hover:text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.182 1.706.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span id="cart-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container mx-auto px-4 md:px-6">
+
+        <!-- Ana Səhifə (Home) -->
+        <section id="home" class="page-content active mb-12">
+            <div class="text-center my-8 md:my-12">
+                <h2 class="text-4xl md:text-5xl font-semibold mb-2">Ən Son Kolleksiya</h2>
+                <p class="text-lg md:text-xl text-gray-600">Zəriflik və keyfiyyət tək ünvan altında.</p>
+            </div>
+            <div id="latest-products" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                <!-- Products will be injected here -->
+            </div>
+        </section>
+
+        <!-- Məhsullar (Products) -->
+        <section id="products" class="page-content mb-12">
+            <div class="text-center my-8 md:my-12">
+                <h2 class="text-4xl md:text-5xl font-semibold mb-2">Bütün Məhsullarımız</h2>
+                <p class="text-lg md:text-xl text-gray-600">Kolleksiyamızla tanış olun.</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-4 mb-8" id="product-filters">
+                <button class="filter-btn active" data-filter="all">Hamısı</button>
+                <button class="filter-btn" data-filter="bel">Bel Çantası</button>
+                <button class="filter-btn" data-filter="el">Əl Çantası</button>
+                <button class="filter-btn" data-filter="deri">Dəri Çanta</button>
+                <button class="filter-btn" data-filter="moda">Modda Olan</button>
+                <button class="filter-btn" data-filter="yeni">Yeni</button>
+            </div>
+            <div id="all-products" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                <!-- Products will be injected here -->
+            </div>
+        </section>
+
+        <!-- Haqqımızda (About Us) -->
+        <section id="about" class="page-content mb-12">
+            <div class="bg-white shadow-soft rounded-xl p-8 md:p-12 max-w-4xl mx-auto">
+                <h2 class="text-4xl md:text-5xl font-semibold mb-4 text-center">Haqqımızda</h2>
+                <p class="text-lg leading-relaxed text-gray-700">
+                    Mubag Style 2024-cü ildə zərif və keyfiyyətli çantalar yaratmaq məqsədilə təsis edilmişdir. Bizim kolleksiyamız hər zövqə və üsluba uyğun, ən son trendləri əks etdirən əl işləri ilə fərqlənir. Hər çanta fərdi toxunuşları ilə sizin unikal stilinizi tamamlayacaq.
+                </p>
+                <p class="text-lg leading-relaxed text-gray-700 mt-4">
+                    Bizim üçün keyfiyyət hər şeydən öncədir. Bütün məhsullarımız ən yüksək standartlara uyğun materiallardan hazırlanır və uzunömürlü olmaq üçün diqqətlə işlənir. Mubag Style ilə hər an zərif və dəbli görünüşə sahib olun.
+                </p>
+            </div>
+        </section>
+
+        <!-- Əlaqə (Contact) -->
+        <section id="contact" class="page-content mb-12">
+            <div class="bg-white shadow-soft rounded-xl p-8 md:p-12 max-w-4xl mx-auto">
+                <h2 class="text-4xl md:text-5xl font-semibold mb-4 text-center">Əlaqə</h2>
+                <p class="text-lg text-gray-700 text-center mb-6">Bizimlə əlaqə saxlamaq üçün aşağıdakı məlumatlardan istifadə edin.</p>
+                <div class="flex flex-col items-center space-y-4 text-lg">
+                    <p><strong>Telefon:</strong> +994 50 123 45 67</p>
+                    <p><strong>E-poçt:</strong> info@mubagstyle.com</p>
+                    <p><strong>Ünvan:</strong> Bakı, Azərbaycan</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Girişi -->
+        <section id="admin" class="page-content mb-12">
+            <div class="bg-white shadow-soft rounded-xl p-8 md:p-12 max-w-4xl mx-auto">
+                <h2 id="admin-title" class="text-4xl md:text-5xl font-semibold mb-6 text-center">Admin Girişi</h2>
+                
+                <!-- Login Form -->
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="password" class="block text-gray-700">Şifrə:</label>
+                        <input type="password" id="password" name="password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <button type="submit" class="w-full btn btn-primary">Daxil Ol</button>
+                    <p id="login-error" class="text-red-500 text-center mt-2" style="display: none;">Şifrə səhvdir.</p>
+                </form>
+
+                <!-- Admin Panel -->
+                <div id="admin-panel" style="display: none;">
+                    <div class="text-center">
+                        <h3 class="text-2xl font-semibold mb-4">Yeni Məhsul Əlavə Et</h3>
+                    </div>
+                    <form id="add-product-form" class="space-y-4">
+                        <div>
+                            <label for="product-name" class="block text-gray-700">Məhsulun Adı:</label>
+                            <input type="text" id="product-name" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="product-price" class="block text-gray-700">Qiyməti (AZN):</label>
+                            <input type="number" id="product-price" step="0.01" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="product-desc" class="block text-gray-700">Açıqlama:</label>
+                            <textarea id="product-desc" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                        </div>
+                        <div>
+                            <label for="product-category" class="block text-gray-700">Kateqoriya:</label>
+                            <select id="product-category" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="bel">Bel Çantası</option>
+                                <option value="el">Əl Çantası</option>
+                                <option value="deri">Dəri Çanta</option>
+                                <option value="moda">Modda Olan</option>
+                                <option value="yeni">Yeni</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="product-images" class="block text-gray-700">Şəkillər (bir və ya bir neçə):</label>
+                            <input type="file" id="product-images" multiple required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <div id="image-preview" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+                        <button type="submit" class="w-full btn btn-primary">Məhsulu Əlavə Et</button>
+                    </form>
+                    <div id="product-message" class="text-center mt-4"></div>
+
+                    <div class="mt-12">
+                        <h3 class="text-2xl font-semibold mb-4 text-center">Mövcud Məhsullar</h3>
+                        <div id="admin-product-list" class="space-y-6">
+                            <!-- Existing products will be listed here -->
+                        </div>
+                    </div>
+                    
+                    <button id="logout-button" class="w-full bg-red-500 text-white py-2 mt-8 rounded-md hover:bg-red-600 transition-colors">Çıxış</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Shopping Cart Modal -->
+    <div id="cart-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 class="text-3xl font-semibold mb-4">Səbət</h2>
+            <div id="cart-items-list">
+                <!-- Cart items will be displayed here -->
+            </div>
+            <div class="mt-4 text-xl font-bold">
+                <span id="cart-total">Cəmi: 0 AZN</span>
+            </div>
+            <button id="checkout-button" class="w-full btn btn-primary mt-6">Sifarişi tamamla</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-soft rounded-t-xl mt-12 p-6 text-center">
+        <a href="https://www.instagram.com/mubag_style" target="_blank" rel="noopener noreferrer" class="text-3xl hover:text-gray-600 transition-colors">
+            <img src="https://img.icons8.com/ios-filled/50/000000/instagram-new.png" alt="Instagram" class="mx-auto w-8 h-8">
+        </a>
+        <p class="text-sm text-gray-600 mt-2">&copy; 2024 Mubag Style. Bütün hüquqlar qorunur.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const adminPassword = "1975";
+            const whatsappNumber = "994504495677";
+            let products = JSON.parse(localStorage.getItem('products')) || [];
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+            const navLinks = document.querySelectorAll('.page-link');
+            const pageContents = document.querySelectorAll('.page-content');
+            const loginForm = document.getElementById('login-form');
+            const adminPanel = document.getElementById('admin-panel');
+            const addProductForm = document.getElementById('add-product-form');
+            const logoutButton = document.getElementById('logout-button');
+            const loginError = document.getElementById('login-error');
+            const adminTitle = document.getElementById('admin-title');
+            const imageInput = document.getElementById('product-images');
+            const imagePreviewContainer = document.getElementById('image-preview');
+            const cartIcon = document.getElementById('cart-icon');
+            const cartCount = document.getElementById('cart-count');
+            const cartModal = document.getElementById('cart-modal');
+            const closeModal = document.querySelector('.close-btn');
+            const cartItemsList = document.getElementById('cart-items-list');
+            const cartTotal = document.getElementById('cart-total');
+            const checkoutButton = document.getElementById('checkout-button');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+
+            // Function to save products to localStorage
+            const saveProducts = () => {
+                localStorage.setItem('products', JSON.stringify(products));
+            };
+
+            // Function to save cart to localStorage
+            const saveCart = () => {
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateCartCount();
+            };
+
+            // Function to update cart count in header
+            const updateCartCount = () => {
+                const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                cartCount.textContent = totalItems;
+            };
+
+            // Function to render products on the page
+            const renderProducts = (filter = 'all') => {
+                const latestContainer = document.getElementById('latest-products');
+                const allContainer = document.getElementById('all-products');
+                const adminListContainer = document.getElementById('admin-product-list');
+
+                latestContainer.innerHTML = '';
+                allContainer.innerHTML = '';
+                adminListContainer.innerHTML = '';
+
+                // Filter products based on selected category
+                const filteredProducts = filter === 'all' ? products : products.filter(p => p.category === filter);
+
+                if (products.length === 0) {
+                    const noProductsMessage = `<p class="col-span-full text-center text-gray-500">Hazırda məhsul yoxdur.</p>`;
+                    latestContainer.innerHTML = noProductsMessage;
+                    allContainer.innerHTML = noProductsMessage;
+                    adminListContainer.innerHTML = noProductsMessage;
+                    return;
+                }
+                
+                // Show latest products (first 3) on home page
+                const latestProducts = products.slice(0, 3);
+                latestProducts.forEach(product => {
+                    const priceDisplay = product.discountedPrice !== undefined ? 
+                        `<span class="discounted-price text-gray-500">${product.originalPrice} AZN</span><span class="text-xl text-red-600 font-bold">${product.discountedPrice} AZN</span>` : 
+                        `<span class="text-xl text-gray-900 font-bold">${product.price} AZN</span>`;
+                    const productCard = `
+                        <div class="bg-white rounded-xl shadow-soft overflow-hidden transition-transform duration-300 hover:scale-105 flex flex-col">
+                            <img src="${product.images[0]}" alt="${product.name}" class="product-image">
+                            <div class="p-6 flex-grow">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-2">${product.name}</h3>
+                                <p class="mb-4">${priceDisplay}</p>
+                                <p class="text-gray-600">${product.description}</p>
+                            </div>
+                            <div class="p-6 pt-0">
+                                <button onclick="addToCart(${product.id})" class="w-full btn btn-primary">Səbətə əlavə et</button>
+                            </div>
+                        </div>
+                    `;
+                    latestContainer.innerHTML += productCard;
+                });
+
+                // Render filtered products for Products page
+                if (filteredProducts.length === 0 && filter !== 'all') {
+                     allContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">Bu kateqoriyada məhsul yoxdur.</p>`;
+                } else {
+                    filteredProducts.forEach(product => {
+                        const priceDisplay = product.discountedPrice !== undefined ? 
+                            `<span class="discounted-price text-gray-500">${product.originalPrice} AZN</span><span class="text-xl text-red-600 font-bold">${product.discountedPrice} AZN</span>` : 
+                            `<span class="text-xl text-gray-900 font-bold">${product.price} AZN</span>`;
+                        const productCard = `
+                            <div class="bg-white rounded-xl shadow-soft overflow-hidden transition-transform duration-300 hover:scale-105 flex flex-col">
+                                <img src="${product.images[0]}" alt="${product.name}" class="product-image">
+                                <div class="p-6 flex-grow">
+                                    <h3 class="text-2xl font-semibold text-gray-800 mb-2">${product.name}</h3>
+                                    <p class="mb-4">${priceDisplay}</p>
+                                    <p class="text-gray-600">${product.description}</p>
+                                </div>
+                                <div class="p-6 pt-0">
+                                    <button onclick="addToCart(${product.id})" class="w-full btn btn-primary">Səbətə əlavə et</button>
+                                </div>
+                            </div>
+                        `;
+                        allContainer.innerHTML += productCard;
+                    });
+                }
+
+
+                // Render products for Admin panel with management options
+                products.forEach(product => {
+                    const priceDisplay = product.discountedPrice !== undefined ? 
+                        `<span class="discounted-price">${product.originalPrice} AZN</span><span class="font-bold text-red-600">${product.discountedPrice} AZN</span>` : 
+                        `<span class="font-bold">${product.price} AZN</span>`;
+                    
+                    const adminProductCard = `
+                        <div class="bg-white rounded-xl shadow-soft p-6 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-6">
+                            <div class="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden">
+                                <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-grow text-center md:text-left">
+                                <h4 class="text-lg font-semibold">${product.name}</h4>
+                                <p class="text-gray-600">Qiymət: ${priceDisplay}</p>
+                                <p class="text-sm text-gray-400">Kateqoriya: ${product.category}</p>
+                            </div>
+                            <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" id="discount-${product.id}" placeholder="Endirim %" class="w-24 px-2 py-1 border rounded-md text-sm">
+                                    <button onclick="applyDiscount(${product.id})" class="btn bg-green-500 text-white hover:bg-green-600 text-sm py-1 px-3">Endirim et</button>
+                                </div>
+                                <button onclick="deleteProduct(${product.id})" class="btn bg-red-500 text-white hover:bg-red-600 text-sm py-1 px-3">Sil</button>
+                            </div>
+                        </div>
+                    `;
+                    adminListContainer.innerHTML += adminProductCard;
+                });
+            };
+
+            // Function to render cart modal content
+            const renderCart = () => {
+                cartItemsList.innerHTML = '';
+                let total = 0;
+                if (cart.length === 0) {
+                    cartItemsList.innerHTML = `<p class="text-center text-gray-500">Səbətiniz boşdur.</p>`;
+                } else {
+                    cart.forEach(item => {
+                        const itemPrice = item.product.discountedPrice !== undefined ? item.product.discountedPrice : item.product.price;
+                        total += itemPrice * item.quantity;
+                        const cartItemElement = `
+                            <div class="cart-item">
+                                <div class="flex items-center space-x-4">
+                                    <img src="${item.product.images[0]}" class="w-12 h-12 object-cover rounded-md">
+                                    <div>
+                                        <p class="font-bold">${item.product.name}</p>
+                                        <p class="text-sm text-gray-600">${itemPrice} AZN x ${item.quantity}</p>
+                                    </div>
+                                </div>
+                                <button onclick="removeFromCart(${item.product.id})" class="text-red-500 hover:text-red-700">Sil</button>
+                            </div>
+                        `;
+                        cartItemsList.innerHTML += cartItemElement;
+                    });
+                }
+                cartTotal.textContent = `Cəmi: ${total.toFixed(2)} AZN`;
+            };
+
+            // Global functions for admin panel actions
+            window.deleteProduct = (id) => {
+                products = products.filter(product => product.id !== id);
+                saveProducts();
+                renderProducts();
+            };
+
+            window.applyDiscount = (id) => {
+                const discountInput = document.getElementById(`discount-${id}`);
+                const discount = parseFloat(discountInput.value);
+                if (isNaN(discount) || discount < 0 || discount > 100) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.textContent = 'Zəhmət olmasa, 0-100 arasında bir rəqəm daxil edin.';
+                    alertDiv.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-lg z-[101]';
+                    document.body.appendChild(alertDiv);
+                    setTimeout(() => alertDiv.remove(), 3000);
+                    return;
+                }
+                const product = products.find(p => p.id === id);
+                if (product) {
+                    const originalPrice = product.price;
+                    const discountedPrice = originalPrice - (originalPrice * discount / 100);
+                    product.originalPrice = originalPrice;
+                    product.discountedPrice = discountedPrice.toFixed(2);
+                    saveProducts();
+                    renderProducts();
+                }
+            };
+            
+            // Global function to add product to cart
+            window.addToCart = (id) => {
+                const productToAdd = products.find(p => p.id === id);
+                if (productToAdd) {
+                    const existingItem = cart.find(item => item.product.id === id);
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        cart.push({ product: productToAdd, quantity: 1 });
+                    }
+                    saveCart();
+                    const toastDiv = document.createElement('div');
+                    toastDiv.textContent = `${productToAdd.name} səbətə əlavə edildi!`;
+                    toastDiv.className = 'fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-md shadow-lg transition-transform transform translate-x-full z-[101]';
+                    document.body.appendChild(toastDiv);
+                    setTimeout(() => {
+                        toastDiv.style.transform = 'translateX(0)';
+                    }, 10);
+                    setTimeout(() => {
+                        toastDiv.style.transform = 'translateX(100%)';
+                        setTimeout(() => toastDiv.remove(), 500);
+                    }, 3000);
+                }
+            };
+
+            // Global function to remove product from cart
+            window.removeFromCart = (id) => {
+                cart = cart.filter(item => item.product.id !== id);
+                saveCart();
+                renderCart();
+            };
+
+            // Category filter click handler
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const filter = button.dataset.filter;
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    renderProducts(filter);
+                });
+            });
+
+            // Function to switch between pages
+            const showPage = (id) => {
+                pageContents.forEach(page => {
+                    if (page.id === id) {
+                        page.classList.add('active');
+                    } else {
+                        page.classList.remove('active');
+                    }
+                });
+            };
+
+            // Page navigation event listeners
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = e.target.getAttribute('href').substring(1);
+                    showPage(pageId);
+                });
+            });
+
+            // Admin login form submission
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const password = document.getElementById('password').value;
+                if (password === adminPassword) {
+                    loginForm.style.display = 'none';
+                    adminPanel.style.display = 'block';
+                    adminTitle.textContent = "Admin Paneli";
+                    loginError.style.display = 'none';
+                    renderProducts(); // Render products in admin view on login
+                } else {
+                    loginError.style.display = 'block';
+                }
+            });
+
+            // Image file selection handler
+            imageInput.addEventListener('change', (event) => {
+                const files = event.target.files;
+                imagePreviewContainer.innerHTML = '';
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'w-16 h-16 object-cover rounded-md';
+                            imagePreviewContainer.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+
+            // Add product form submission
+            addProductForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('product-name').value;
+                const price = parseFloat(document.getElementById('product-price').value);
+                const desc = document.getElementById('product-desc').value;
+                const category = document.getElementById('product-category').value;
+                const imageFiles = document.getElementById('product-images').files;
+                
+                const images = [];
+                const readPromises = [];
+
+                for (let i = 0; i < imageFiles.length; i++) {
+                    readPromises.push(new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            images.push(e.target.result);
+                            resolve();
+                        };
+                        reader.readAsDataURL(imageFiles[i]);
+                    }));
+                }
+
+                await Promise.all(readPromises);
+
+                const newProduct = {
+                    id: Date.now(),
+                    name,
+                    price,
+                    description: desc,
+                    category,
+                    images,
+                    originalPrice: price
+                };
+
+                products.unshift(newProduct);
+                saveProducts();
+                renderProducts();
+
+                document.getElementById('product-message').textContent = 'Məhsul uğurla əlavə edildi!';
+                addProductForm.reset();
+                imagePreviewContainer.innerHTML = '';
+                
+                setTimeout(() => {
+                    document.getElementById('product-message').textContent = '';
+                }, 3000);
+            });
+
+            // Logout functionality
+            logoutButton.addEventListener('click', () => {
+                loginForm.style.display = 'block';
+                adminPanel.style.display = 'none';
+                adminTitle.textContent = "Admin Girişi";
+                document.getElementById('password').value = '';
+            });
+
+            // Cart Modal functions
+            cartIcon.onclick = () => {
+                renderCart();
+                cartModal.style.display = "block";
+            };
+
+            closeModal.onclick = () => {
+                cartModal.style.display = "none";
+            };
+
+            window.onclick = (event) => {
+                if (event.target == cartModal) {
+                    cartModal.style.display = "none";
+                }
+            };
+            
+            // Checkout function
+            checkoutButton.onclick = () => {
+                if (cart.length === 0) {
+                    const emptyCartAlert = document.createElement('div');
+                    emptyCartAlert.textContent = 'Səbətiniz boşdur, zəhmət olmasa məhsul əlavə edin.';
+                    emptyCartAlert.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-lg z-[101]';
+                    document.body.appendChild(emptyCartAlert);
+                    setTimeout(() => emptyCartAlert.remove(), 3000);
+                    return;
+                }
+
+                let message = "Salam, sifariş vermək istəyirəm:\n\n";
+                cart.forEach(item => {
+                    const price = item.product.discountedPrice !== undefined ? item.product.discountedPrice : item.product.price;
+                    message += `* ${item.product.name} (${item.product.category}) - ${price} AZN (${item.quantity} ədəd)\n`;
+                });
+                const total = cart.reduce((sum, item) => {
+                    const price = item.product.discountedPrice !== undefined ? item.product.discountedPrice : item.product.price;
+                    return sum + price * item.quantity;
+                }, 0);
+                message += `\nCəmi: ${total.toFixed(2)} AZN`;
+
+                const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+
+                cart = [];
+                saveCart();
+                renderCart();
+                cartModal.style.display = "none";
+            };
+
+            // Initial render
+            renderProducts();
+            updateCartCount();
+            showPage('home');
+        });
+    </script>
+</body>
+</html>
