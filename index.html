@@ -1,241 +1,302 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonim Chat Otağı</title>
+    <title>Genel Not Panosu (Herkese Açık)</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #e5e7eb;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 1rem;
-        }
-        .container {
-            max-width: 700px;
-            width: 100%;
-            background-color: #ffffff;
-            border-radius: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 80vh;
-        }
-        .chat-header {
-            background-color: #1f2937;
-            color: #ffffff;
-            padding: 1rem;
-            text-align: center;
-        }
-        .message-list {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 1rem;
-        }
-        .message {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 1.25rem;
-            animation: fadeIn 0.5s ease-out;
-            word-wrap: break-word;
-        }
-        .my-message {
-            background-color: #3b82f6;
-            color: #ffffff;
-            align-self: flex-end;
-            border-bottom-right-radius: 0.25rem;
-        }
-        .other-message {
-            background-color: #e5e7eb;
-            color: #1f2937;
-            align-self: flex-start;
-            border-bottom-left-radius: 0.25rem;
-        }
-        .message-sender {
-            font-size: 0.75rem;
-            color: #6b7280;
-            margin-bottom: 0.25rem;
-        }
-        .chat-input-form {
-            display: flex;
-            padding: 1rem;
-            border-top: 1px solid #e5e7eb;
-            background-color: #f9fafb;
-        }
-        .chat-input {
-            flex-grow: 1;
-            padding: 0.75rem 1rem;
-            border-radius: 9999px;
-            border: 1px solid #d1d5db;
-            outline: none;
-            transition: border-color 0.2s ease-in-out;
-        }
-        .chat-input:focus {
-            border-color: #2563eb;
-        }
-        .chat-send-btn {
-            background-color: #2563eb;
-            color: #ffffff;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            margin-left: 0.5rem;
-            transition: background-color 0.2s ease-in-out;
-        }
-        .chat-send-btn:hover {
-            background-color: #1e40af;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .info-text {
-            padding: 1rem;
-            text-align: center;
-            color: #6b7280;
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        .note-card { transition: all 0.2s ease-in-out; }
+        .note-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }
+        /* Özel stil: Butonları mobil cihazlarda tam genişlikte yapar */
+        @media (max-width: 640px) {
+            #addNoteForm button { width: 100%; }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="chat-header">
-            <h1 class="text-2xl font-bold">Anonim Chat Otağı</h1>
-            <p id="user-id-display" class="text-sm mt-1"></p>
+<body class="min-h-screen p-4 sm:p-8">
+    
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-800">Genel Not Panosu</h1>
+            <p class="mt-2 text-lg text-gray-600">Buraya eklenen notları herkes anında görür!</p>
+            <p class="mt-4 text-sm text-gray-400">Kullanıcı Kimliğiniz: <span id="userIdDisplay" class="font-mono text-xs bg-gray-200 px-2 py-1 rounded">Yükleniyor...</span></p>
+        </header>
+
+        <!-- Yeni Not Ekleme Formu -->
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl mb-10 border-t-4 border-blue-500">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Yeni Not Ekle</h2>
+            <form id="addNoteForm" onsubmit="addNote(event)">
+                <textarea 
+                    id="noteContent" 
+                    rows="4" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none text-gray-800"
+                    placeholder="Notunuzu buraya yazın..." 
+                    required></textarea>
+                
+                <button 
+                    type="submit" 
+                    id="saveButton"
+                    class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
+                    disabled>
+                    Kaydet ve Herkese Göster
+                </button>
+            </form>
         </div>
 
-        <div id="message-list-container" class="message-list">
-            <p id="loading-text" class="info-text">Mesajlar yüklənir...</p>
+        <!-- Notlar Listesi -->
+        <div class="mb-6">
+            <h2 class="text-3xl font-bold text-gray-700 mb-4">Mevcut Notlar</h2>
+            <div id="loadingIndicator" class="text-center p-8 text-gray-500">
+                <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                <p class="mt-2">Notlar yükleniyor...</p>
+            </div>
+            <div id="notesContainer" class="space-y-4">
+                <!-- Notlar buraya JavaScript ile eklenecek -->
+            </div>
+            <p id="noNotesMessage" class="hidden text-center p-8 text-gray-500 bg-white rounded-xl mt-4 border border-dashed">Henüz hiç not yok. İlk notu siz ekleyin!</p>
         </div>
 
-        <form id="chat-form" class="chat-input-form">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Mesajınızı yazın..." required />
-            <button type="submit" class="chat-send-btn">Göndər</button>
-        </form>
     </div>
 
-    <!-- Firebase SDK Skriptləri -->
+    <!-- Firebase Kütüphaneleri -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            query, 
+            orderBy, 
+            onSnapshot, 
+            addDoc, 
+            deleteDoc, 
+            doc,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firestore debug loglarını aktivləşdiririk
-        setLogLevel('debug');
-
-        // Global dəyişənləri müəyyən edirik
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Firebase ve Uygulama Konfigürasyonları
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Elementləri seçirik
-        const messageListContainer = document.getElementById('message-list-container');
-        const chatForm = document.getElementById('chat-form');
-        const chatInput = document.getElementById('chat-input');
-        const userIdDisplay = document.getElementById('user-id-display');
-        const loadingText = document.getElementById('loading-text');
-
-        // Firebase tətbiqini başladırıq
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
+        // Global değişkenler
+        let db;
+        let auth;
         let currentUserId = null;
+        let isAuthReady = false;
 
-        // İstifadəçinin avtorizasiya vəziyyətini izləyirik
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUserId = user.uid;
-                userIdDisplay.textContent = `Sizin ID-niz: ${currentUserId}`;
-                loadingText.textContent = 'Mesajlar yüklənir...';
-                setupRealtimeListener();
-            } else {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
+        // DOM Elementleri
+        const notesContainer = document.getElementById('notesContainer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const saveButton = document.getElementById('saveButton');
+        const noNotesMessage = document.getElementById('noNotesMessage');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+
+        /**
+         * Firestore bağlantısını başlatır ve kimlik doğrulamasını gerçekleştirir.
+         */
+        async function initializeFirebase() {
+            try {
+                // Firebase uygulamasını başlat
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // Firestore log seviyesini ayarla (debug amaçlı)
+                setLogLevel('Debug'); 
+
+                // Kimlik doğrulama dinleyicisi
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        userIdDisplay.textContent = currentUserId;
+                        console.log("Kullanıcı kimliği alındı:", currentUserId);
+                        isAuthReady = true;
+                        // Butonu etkinleştir ve notları yüklemeye başla
+                        saveButton.disabled = false; 
+                        listenForNotes();
                     } else {
-                        await signInAnonymously(auth);
+                        // Eğer token yoksa anonim olarak giriş yap
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
                     }
-                } catch (error) {
-                    console.error("Giriş zamanı xəta:", error);
-                    loadingText.textContent = 'Mesajlar yüklənə bilmədi. Xahiş edirik yenidən cəhd edin.';
-                }
+                });
+            } catch (error) {
+                console.error("Firebase başlatılırken hata oluştu:", error);
+                userIdDisplay.textContent = "HATA (Firebase Bağlantısı)";
+                alertMessage("Hata: Veritabanı bağlantısı kurulamadı. Lütfen konsolu kontrol edin.");
             }
-        });
+        }
 
-        // Mesaj göndərmə funksiyası
-        chatForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const messageText = chatInput.value.trim();
+        /**
+         * Notları gerçek zamanlı olarak dinler ve arayüzü günceller.
+         * Veriler herkesin erişebileceği (public) alanda tutulur.
+         */
+        function listenForNotes() {
+            if (!db || !isAuthReady) return;
 
-            if (messageText !== "" && currentUserId) {
-                try {
-                    const messagesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
-                    await addDoc(messagesCollection, {
-                        text: messageText,
-                        senderId: currentUserId,
-                        timestamp: serverTimestamp()
-                    });
-                    chatInput.value = '';
-                    chatInput.focus();
-                } catch (error) {
-                    console.error("Mesaj göndərmə xətası:", error);
-                }
-            }
-        });
+            // Veritabanı yolu: /artifacts/{appId}/public/data/public_notes
+            const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
+            const notesRef = collection(db, notesCollectionPath);
+            
+            // Timestamp'e göre en yeniyi üste al (ters sıra)
+            const q = query(notesRef); 
 
-        // Firestore-da mesajları real vaxtda dinləyirik
-        function setupRealtimeListener() {
-            if (!currentUserId) {
-                return;
-            }
+            console.log("Notlar koleksiyonu dinleniyor:", notesCollectionPath);
 
-            const messagesCollection = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
-            const q = query(messagesCollection, orderBy('timestamp', 'desc'));
+            onSnapshot(q, (snapshot) => {
+                loadingIndicator.classList.add('hidden'); // Yükleniyor mesajını gizle
+                notesContainer.innerHTML = ''; // Panoyu temizle
+                const notes = [];
 
-            onSnapshot(q, (querySnapshot) => {
-                loadingText.style.display = 'none';
-                messageListContainer.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    notes.push({ id: doc.id, ...data });
+                });
 
-                if (querySnapshot.empty) {
-                    const noMessages = document.createElement('p');
-                    noMessages.textContent = 'Hələ heç bir mesaj yoxdur.';
-                    noMessages.className = 'info-text';
-                    messageListContainer.appendChild(noMessages);
+                // Notları manuel olarak zamana göre (timestamp) ters sırada sırala
+                // Not: Firestore'da orderBy'den kaçınıldığı için bu önemli
+                notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+                if (notes.length === 0) {
+                    noNotesMessage.classList.remove('hidden');
                 } else {
-                    querySnapshot.forEach((doc) => {
-                        const message = doc.data();
-                        const messageDiv = document.createElement('div');
-                        messageDiv.className = `message ${message.senderId === currentUserId ? 'my-message' : 'other-message'}`;
-                        
-                        // Göndərənin ID-sini göstəririk
-                        const senderSpan = document.createElement('span');
-                        senderSpan.className = 'message-sender';
-                        senderSpan.textContent = `Göndərən: ${message.senderId}`;
-                        messageDiv.appendChild(senderSpan);
-
-                        // Mesaj mətnini göstəririk
-                        const textP = document.createElement('p');
-                        textP.textContent = message.text;
-                        messageDiv.appendChild(textP);
-
-                        messageListContainer.appendChild(messageDiv);
+                    noNotesMessage.classList.add('hidden');
+                    notes.forEach(note => {
+                        notesContainer.appendChild(createNoteElement(note));
                     });
                 }
             }, (error) => {
-                console.error("Mesajları yükləmə zamanı xəta:", error);
-                loadingText.textContent = 'Mesajlar yüklənərkən xəta baş verdi.';
+                console.error("Notları dinlerken hata:", error);
+                alertMessage("Hata: Notları çekerken bir sorun oluştu. Lütfen konsolu kontrol edin.");
+                loadingIndicator.classList.add('hidden');
             });
         }
+
+        /**
+         * Yeni bir notu Firestore'a ekler.
+         * @param {Event} e - Form gönderme olayı.
+         */
+        window.addNote = async function(e) {
+            e.preventDefault();
+            if (!db || !currentUserId) return;
+
+            const noteContentEl = document.getElementById('noteContent');
+            const content = noteContentEl.value.trim();
+
+            if (content.length === 0) return;
+
+            saveButton.disabled = true;
+            saveButton.textContent = 'Kaydediliyor...';
+
+            try {
+                const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
+                
+                await addDoc(collection(db, notesCollectionPath), {
+                    content: content,
+                    timestamp: Date.now(),
+                    userId: currentUserId,
+                });
+
+                noteContentEl.value = ''; // Input'u temizle
+                console.log("Yeni not başarıyla eklendi.");
+            } catch (error) {
+                console.error("Not eklenirken hata oluştu:", error);
+                alertMessage("Hata: Notunuz kaydedilemedi.");
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = 'Kaydet ve Herkese Göster';
+            }
+        }
+
+        /**
+         * Notu Firestore'dan siler.
+         * @param {string} noteId - Silinecek notun belge kimliği.
+         */
+        window.deleteNote = async function(noteId) {
+            if (!db || !currentUserId) return;
+
+            // Basit bir modal/onay işlevi yerine konsol uyarısı kullanalım.
+            if (!confirm("Bu notu silmek istediğinizden emin misiniz?")) {
+                return;
+            }
+
+            try {
+                const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
+                const noteRef = doc(db, notesCollectionPath, noteId);
+                await deleteDoc(noteRef);
+                console.log("Not başarıyla silindi:", noteId);
+            } catch (error) {
+                console.error("Not silinirken hata oluştu:", error);
+                alertMessage("Hata: Not silinemedi.");
+            }
+        }
+        
+        /**
+         * Not nesnesini HTML elementine dönüştürür.
+         * @param {object} note - Not verisi.
+         * @returns {HTMLElement} - Not kartı elementi.
+         */
+        function createNoteElement(note) {
+            const card = document.createElement('div');
+            card.className = 'note-card bg-white p-5 rounded-xl shadow-lg border-l-4 border-blue-400 flex justify-between items-start';
+            card.setAttribute('data-id', note.id);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'flex-grow mr-4';
+
+            const text = document.createElement('p');
+            text.className = 'text-gray-800 text-lg whitespace-pre-wrap';
+            text.textContent = note.content;
+
+            const meta = document.createElement('small');
+            const date = new Date(note.timestamp).toLocaleString('tr-TR');
+            meta.className = 'block mt-2 text-gray-400 text-xs';
+            meta.innerHTML = `Ekleyen: <span class="font-mono">${note.userId}</span> | Tarih: ${date}`;
+
+            contentDiv.appendChild(text);
+            contentDiv.appendChild(meta);
+            
+            card.appendChild(contentDiv);
+
+            // Silme butonu
+            const deleteButton = document.createElement('button');
+            deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400 hover:text-red-600 transition" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                      </svg>`;
+            deleteButton.title = "Notu Sil (Herkes Silebilir)";
+            deleteButton.className = 'flex-shrink-0 p-2 rounded-full hover:bg-red-100 transition';
+            deleteButton.onclick = () => deleteNote(note.id);
+            
+            card.appendChild(deleteButton);
+
+            return card;
+        }
+
+        /**
+         * Kullanıcıya bilgi/hata mesajı gösterir (alert yerine basit bir modal veya log kullanmak daha iyidir).
+         * @param {string} message - Gösterilecek mesaj.
+         */
+        function alertMessage(message) {
+            console.warn("UYARI:", message);
+            // Gerçek bir uygulamada bu bir modal penceresi olurdu. Burada konsola yazıyoruz.
+            const errorArea = document.createElement('div');
+            errorArea.className = 'fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-500';
+            errorArea.textContent = message;
+            document.body.appendChild(errorArea);
+            setTimeout(() => errorArea.remove(), 5000);
+        }
+
+        // Uygulamayı Başlat
+        window.onload = initializeFirebase;
     </script>
 </body>
 </html>
+
