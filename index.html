@@ -60,6 +60,9 @@
             <p id="noNotesMessage" class="hidden text-center p-8 text-gray-500 bg-white rounded-xl mt-4 border border-dashed">Henüz hiç not yok. İlk notu siz ekleyin!</p>
         </div>
 
+        <!-- Dinamik Hata/Bilgi Mesajları için Kapsayıcı -->
+        <div id="messageContainer"></div>
+
     </div>
 
     <!-- Firebase Kütüphaneleri -->
@@ -70,7 +73,6 @@
             getFirestore, 
             collection, 
             query, 
-            orderBy, 
             onSnapshot, 
             addDoc, 
             deleteDoc, 
@@ -95,12 +97,47 @@
         const saveButton = document.getElementById('saveButton');
         const noNotesMessage = document.getElementById('noNotesMessage');
         const userIdDisplay = document.getElementById('userIdDisplay');
+        const messageContainer = document.getElementById('messageContainer');
+
+        /**
+         * Kullanıcıya bilgi/hata mesajı gösterir (alert yerine).
+         * @param {string} message - Gösterilecek mesaj.
+         * @param {string} type - 'error' veya 'info'
+         */
+        function alertMessage(message, type = 'error') {
+            console.warn("UYARI:", message);
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            
+            const messageEl = document.createElement('div');
+            messageEl.className = `fixed bottom-4 right-4 ${bgColor} text-white p-4 rounded-xl shadow-2xl z-50 opacity-0 transition-opacity duration-300 transform translate-y-2`;
+            messageEl.textContent = message;
+            
+            messageContainer.appendChild(messageEl);
+
+            // Animasyonla görünür yap
+            setTimeout(() => {
+                messageEl.classList.remove('opacity-0', 'translate-y-2');
+                messageEl.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+
+            // Belirli bir süre sonra kaybol
+            setTimeout(() => {
+                messageEl.classList.remove('opacity-100', 'translate-y-0');
+                messageEl.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => messageEl.remove(), 300); // Elementi kaldır
+            }, 6000);
+        }
 
         /**
          * Firestore bağlantısını başlatır ve kimlik doğrulamasını gerçekleştirir.
          */
         async function initializeFirebase() {
             try {
+                // Konfigürasyonun varlığını kontrol et
+                if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
+                    throw new Error("Missing Firebase Configuration. Please run the app in the Canvas Preview environment.");
+                }
+
                 // Firebase uygulamasını başlat
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -130,14 +167,19 @@
                 });
             } catch (error) {
                 console.error("Firebase başlatılırken hata oluştu:", error);
-                userIdDisplay.textContent = "HATA (Firebase Bağlantısı)";
-                alertMessage("Hata: Veritabanı bağlantısı kurulamadı. Lütfen konsolu kontrol edin.");
+                
+                if (error.message.includes("Missing Firebase Configuration")) {
+                    userIdDisplay.textContent = "HATA (Eksik Konfigürasyon)";
+                    alertMessage("⚠️ ÖNEMLİ HATA: Bu uygulama Firebase ayarlarını otomatik olarak aldığından, harici bir linkte düzgün çalışmaz. Lütfen dosyayı buradaki 'Önizle' butonunda deneyin.", 'error');
+                } else {
+                    userIdDisplay.textContent = "HATA (Firebase Bağlantısı)";
+                    alertMessage("Hata: Veritabanı bağlantısı kurulamadı. Lütfen konsolu kontrol edin.", 'error');
+                }
             }
         }
 
         /**
          * Notları gerçek zamanlı olarak dinler ve arayüzü günceller.
-         * Veriler herkesin erişebileceği (public) alanda tutulur.
          */
         function listenForNotes() {
             if (!db || !isAuthReady) return;
@@ -146,14 +188,14 @@
             const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
             const notesRef = collection(db, notesCollectionPath);
             
-            // Timestamp'e göre en yeniyi üste al (ters sıra)
+            // Sıralama yapmadan tüm notları çek (Firestore index gereksinimlerinden kaçınmak için)
             const q = query(notesRef); 
 
             console.log("Notlar koleksiyonu dinleniyor:", notesCollectionPath);
 
             onSnapshot(q, (snapshot) => {
-                loadingIndicator.classList.add('hidden'); // Yükleniyor mesajını gizle
-                notesContainer.innerHTML = ''; // Panoyu temizle
+                loadingIndicator.classList.add('hidden'); 
+                notesContainer.innerHTML = ''; 
                 const notes = [];
 
                 snapshot.forEach((doc) => {
@@ -161,8 +203,7 @@
                     notes.push({ id: doc.id, ...data });
                 });
 
-                // Notları manuel olarak zamana göre (timestamp) ters sırada sırala
-                // Not: Firestore'da orderBy'den kaçınıldığı için bu önemli
+                // Notları manuel olarak zamana göre (timestamp) ters sırada sırala (En yeni üstte)
                 notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
                 if (notes.length === 0) {
@@ -175,14 +216,13 @@
                 }
             }, (error) => {
                 console.error("Notları dinlerken hata:", error);
-                alertMessage("Hata: Notları çekerken bir sorun oluştu. Lütfen konsolu kontrol edin.");
+                alertMessage("Hata: Notları çekerken bir sorun oluştu. Lütfen konsolu kontrol edin.", 'error');
                 loadingIndicator.classList.add('hidden');
             });
         }
 
         /**
          * Yeni bir notu Firestore'a ekler.
-         * @param {Event} e - Form gönderme olayı.
          */
         window.addNote = async function(e) {
             e.preventDefault();
@@ -206,10 +246,10 @@
                 });
 
                 noteContentEl.value = ''; // Input'u temizle
-                console.log("Yeni not başarıyla eklendi.");
+                alertMessage("Not başarıyla kaydedildi ve herkese açık!", 'info');
             } catch (error) {
                 console.error("Not eklenirken hata oluştu:", error);
-                alertMessage("Hata: Notunuz kaydedilemedi.");
+                alertMessage("Hata: Notunuz kaydedilemedi.", 'error');
             } finally {
                 saveButton.disabled = false;
                 saveButton.textContent = 'Kaydet ve Herkese Göster';
@@ -218,13 +258,13 @@
 
         /**
          * Notu Firestore'dan siler.
-         * @param {string} noteId - Silinecek notun belge kimliği.
          */
         window.deleteNote = async function(noteId) {
             if (!db || !currentUserId) return;
 
-            // Basit bir modal/onay işlevi yerine konsol uyarısı kullanalım.
-            if (!confirm("Bu notu silmek istediğinizden emin misiniz?")) {
+            // Bu bir onay penceresi işlevidir, tarayıcı 'alert' veya 'confirm' kullanmaz
+            const confirmation = window.prompt("Bu notu silmek istediğinizden emin misiniz? Silmek için 'EVET' yazın.");
+            if (confirmation !== 'EVET') {
                 return;
             }
 
@@ -232,17 +272,15 @@
                 const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
                 const noteRef = doc(db, notesCollectionPath, noteId);
                 await deleteDoc(noteRef);
-                console.log("Not başarıyla silindi:", noteId);
+                alertMessage("Not başarıyla silindi.", 'info');
             } catch (error) {
                 console.error("Not silinirken hata oluştu:", error);
-                alertMessage("Hata: Not silinemedi.");
+                alertMessage("Hata: Not silinemedi.", 'error');
             }
         }
         
         /**
          * Not nesnesini HTML elementine dönüştürür.
-         * @param {object} note - Not verisi.
-         * @returns {HTMLElement} - Not kartı elementi.
          */
         function createNoteElement(note) {
             const card = document.createElement('div');
@@ -266,7 +304,7 @@
             
             card.appendChild(contentDiv);
 
-            // Silme butonu
+            // Silme butonu (Herkesin silmesine izin verilir, herkesin katkıda bulunabileceği bir pano olduğu için)
             const deleteButton = document.createElement('button');
             deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400 hover:text-red-600 transition" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
@@ -278,20 +316,6 @@
             card.appendChild(deleteButton);
 
             return card;
-        }
-
-        /**
-         * Kullanıcıya bilgi/hata mesajı gösterir (alert yerine basit bir modal veya log kullanmak daha iyidir).
-         * @param {string} message - Gösterilecek mesaj.
-         */
-        function alertMessage(message) {
-            console.warn("UYARI:", message);
-            // Gerçek bir uygulamada bu bir modal penceresi olurdu. Burada konsola yazıyoruz.
-            const errorArea = document.createElement('div');
-            errorArea.className = 'fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-lg shadow-xl z-50 transition-opacity duration-500';
-            errorArea.textContent = message;
-            document.body.appendChild(errorArea);
-            setTimeout(() => errorArea.remove(), 5000);
         }
 
         // Uygulamayı Başlat
