@@ -1,358 +1,465 @@
-<!DOCTYPE html>
-<html lang="az">
+<!doctype html>
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masroxx Telefon ilə Giriş & Qeydiyyat</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #1a202c; /* Tünd fon rəngi */
-            color: #e2e8f0; /* Açıq mətn rəngi */
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Keskin ve Stabil PDF Görüntüleyici</title>
+  
+  <!-- Tailwind CSS'i yükle -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind konfigürasyonu
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            'primary-blue': '#0b63a3',
+            'secondary-blue': '#1e7dbd',
+            'light-blue': '#e0f2ff',
+            'error-red': '#d32f2f',
+          }
         }
-        .input-style {
-            @apply w-full px-4 py-3 bg-gray-700 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-300;
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen p-4">
+      }
+    }
+  </script>
+  <style>
+    /* Temel vücut stilleri */
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #f5f7fb;
+      overflow: hidden; /* Dış kaydırmayı engelle */
+    }
 
-    <!-- Əsas Kapsayıcı (Container) -->
-    <div id="app" class="w-full max-w-md bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+    /* PDF Sayfalarını Barındıran Alan */
+    #pdf-renderer {
+        flex-grow: 1;
+        overflow-y: auto; 
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem; 
+    }
 
-        <!-- Başlıq -->
-        <header class="bg-gray-700 text-center py-6 px-4">
-            <h1 id="pageTitle" class="text-3xl font-bold text-white">Xoş gəlmisiniz!</h1>
-        </header>
+    /* Her bir canvas (sayfa) için stil */
+    .pdf-page-canvas {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-radius: 6px;
+        background-color: white;
+        width: 100%; 
+        max-width: 800px; 
+        height: auto;
+    }
+    
+    /* Header ve Butonların bulunduğu konteyner */
+    .header-container {
+      position: relative;
+      background-color: #0b63a3;
+      z-index: 20; 
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 
-        <!-- Forma Bölməsi (Telefon Girişi) -->
-        <main id="authFormSection" class="p-8 space-y-6 transition-transform duration-500 ease-in-out">
-            <h2 id="formTitle" class="text-2xl font-semibold text-center text-gray-100">Telefonla Daxil ol</h2>
-            
-            <!-- Telefon Nömrəsi Forması (1-ci Addım) -->
-            <form id="phoneForm" class="space-y-4">
-                <p class="text-sm text-gray-400 text-center">Təsdiqləmə kodunu almaq üçün telefon nömrənizi daxil edin.</p>
-                <div class="flex space-x-2">
-                    <!-- Ölkə Kodu Seçimi -->
-                    <div class="w-1/3">
-                        <label for="countryCode" class="sr-only">Ölkə Kodu</label>
-                        <select id="countryCode" class="input-style pr-2">
-                            <option value="+994" selected>+994 (AZ)</option>
-                            <option value="+90">+90 (TR)</option>
-                            <option value="+7">+7 (RU/KZ)</option>
-                            <option value="+44">+44 (UK)</option>
-                            <option value="+1">+1 (USA)</option>
-                            <!-- Əlavə ölkələr əlavə edilə bilər -->
-                        </select>
-                    </div>
-                    <!-- Telefon Nömrəsi Girişi -->
-                    <div class="w-2/3">
-                        <label for="phoneNumber" class="sr-only">Telefon Nömrəsi</label>
-                        <input type="tel" id="phoneNumber" placeholder="Nömrə (məs: 501234567)" required
-                               class="input-style">
-                    </div>
-                </div>
-                
-                <!-- reCAPTCHA görünməz konteyneri -->
-                <div id="recaptcha-container" class="mt-4 flex justify-center"></div>
+    /* Geçmiş Paneli (Sidebar) Stili */
+    #history-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 320px;
+        max-width: 85vw;
+        height: 100vh;
+        background-color: white;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 30;
+        box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+    }
 
-                <button type="submit" id="sendCodeBtn"
-                        class="w-full py-3 mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out disabled:bg-gray-600">
-                    Kodu Göndər
-                </button>
-            </form>
+    #history-panel.open {
+        transform: translateX(0);
+    }
 
-            <!-- OTP Təsdiqləmə Forması (2-ci Addım) - Əvvəlcə gizli -->
-            <form id="otpForm" class="space-y-4 hidden">
-                <p class="text-sm text-gray-400 text-center" id="otp-instruction">
-                    **<span id="target-phone"></span>** nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
-                </p>
-                <div>
-                    <label for="otpCode" class="sr-only">Təsdiqləmə Kodu (OTP)</label>
-                    <input type="number" id="otpCode" placeholder="Təsdiqləmə Kodu" required
-                           class="input-style text-center text-xl tracking-wider" maxlength="6">
-                </div>
-                <button type="submit" id="verifyBtn"
-                        class="w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out disabled:bg-gray-600">
-                    Təsdiqlə
-                </button>
-                <button type="button" onclick="resetFlow()"
-                        class="w-full py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200">
-                    Nömrəni Dəyişdir
-                </button>
-            </form>
-        </main>
+    #history-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 25;
+        display: none;
+    }
+  </style>
+  
+  <!-- Firebase Kütüphaneleri -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, orderBy, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    
+    // PDF.js Kütüphanesi
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.mjs';
 
-        <!-- Əsas səhifə görünüşü (Giriş Uğurlu olduqda) -->
-        <main id="homeSection" class="hidden p-8 space-y-6">
-            <div class="text-center">
-                <h2 class="text-3xl font-bold text-emerald-400">Giriş Uğurludur! 🎉</h2>
-                <p id="userPhoneDisplay" class="text-lg text-gray-300 mt-2 font-mono break-all"></p>
-                <p class="text-sm text-gray-400">Söhbət proqramı yüklənməyə hazırdır.</p>
-            </div>
-            <div class="mt-8 text-center">
-                <button onclick="logout()"
-                        class="py-3 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out">
-                    Çıxış
-                </button>
-            </div>
-        </main>
+    // PDF.js Worker yolunu ayarla
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.mjs';
 
-        <!-- Mesaj Qutusu (Modal) -->
-        <div id="messageBox" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
-            <div class="bg-gray-700 text-white p-6 rounded-xl shadow-2xl text-center max-w-xs w-full">
-                <p id="messageText" class="text-lg mb-4"></p>
-                <button onclick="hideMessage()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold">Bağla</button>
-            </div>
-        </div>
-    </div>
+    // Firebase Global Değişkenleri
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    // Firebase Servisleri
+    let app, db, auth, userId = null;
 
-    <!-- Firebase SDK İdxalları -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPhoneNumber, signInWithCustomToken, onAuthStateChanged, RecaptchaVerifier, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    // DOM Öğeleri
+    const dropzone = document.getElementById('dropzone');
+    const pdfRenderer = document.getElementById('pdf-renderer');
+    const messageBox = document.getElementById('message-box');
+    const backButton = document.getElementById('back-button');
+    const loadingText = document.getElementById('loading-text');
+    const historyButton = document.getElementById('history-button');
+    const historyPanel = document.getElementById('history-panel');
+    const historyList = document.getElementById('history-list');
+    const historyOverlay = document.getElementById('history-overlay');
+    const userIdDisplay = document.getElementById('user-id-display');
 
-        // Global dəyişənlər
-        let auth, db;
-        let confirmationResult = null; // Təsdiqləmə nəticəsini saxlamaq üçün
-        let recaptchaVerifier = null;
-        let isAuthReady = false;
+    // --- FIREBASE İŞLEMLERİ ---
 
-        // HTML elementləri
-        const authFormSection = document.getElementById('authFormSection');
-        const homeSection = document.getElementById('homeSection');
-        const phoneForm = document.getElementById('phoneForm');
-        const otpForm = document.getElementById('otpForm');
-        const countryCode = document.getElementById('countryCode');
-        const phoneNumberInput = document.getElementById('phoneNumber');
-        const otpCodeInput = document.getElementById('otpCode');
-        const sendCodeBtn = document.getElementById('sendCodeBtn');
-        const verifyBtn = document.getElementById('verifyBtn');
-        const userIdDisplay = document.getElementById('userPhoneDisplay');
-        const targetPhoneDisplay = document.getElementById('target-phone');
-        
-        const messageBox = document.getElementById('messageBox');
-        const messageText = document.getElementById('messageText');
-
-        // Firebase Konfiqurasiyası (Canvas mühitindən gəlir)
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // --- Mesaj Qutusu Funksiyaları ---
-
-        function showMessage(msg) {
-            messageText.innerText = msg;
-            messageBox.classList.remove('hidden');
-            messageBox.classList.add('flex');
-        }
-
-        window.hideMessage = function() {
-            messageBox.classList.remove('flex');
-            messageBox.classList.add('hidden');
-        }
-
-        // --- Firebase Başlatma və Təsdiqləmə ---
-
-        async function initializeFirebase() {
-            if (!firebaseConfig) {
-                showMessage("Xəta: Firebase konfiqurasiyası tapılmadı!");
-                return;
+    // Firebase Başlatma ve Kimlik Doğrulama
+    async function initializeFirebase() {
+        try {
+            if (Object.keys(firebaseConfig).length === 0) {
+                 console.error("Firebase yapılandırması eksik. Veritabanı devre dışı.");
+                 showMessage("Veritabanı bağlantısı kurulamadı. Geçmiş özelliği çalışmayacak.", true);
+                 return;
             }
             
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                // Canvas xüsusi tokeni ilə daxil olmağa cəhd edin
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                }
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setLogLevel('Debug'); // Hata ayıklama için Firestore loglarını aç
 
-                // İstifadəçi vəziyyətini dinləyin
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        isAuthReady = true;
-                        // Əgər telefon nömrəsi varsa, onu göstər, yoxsa UID göstər
-                        const userIdentifier = user.phoneNumber || user.uid; 
-                        checkAuth(userIdentifier);
-                    } else {
-                        isAuthReady = true;
-                        checkAuth(null);
-                        // reCAPTCHA-nı yalnız istifadəçi daxil olmadıqda başlatın
-                        setupRecaptcha();
-                    }
-                });
-
-            } catch (error) {
-                console.error("Firebase Başlatma Xətası:", error);
-                showMessage(`Bağlantı Xətası: ${error.message}`);
-                // reCAPTCHA-nı başlatmaq üçün əl ilə çağırın, çünki onAuthStateChanged işləməyə bilər
-                setupRecaptcha();
-            }
-        }
-
-        // --- reCAPTCHA Təyin etmək ---
-
-        function setupRecaptcha() {
-            // Əgər auth və reCAPTCHA hələ təyin olunmayıbsa
-            if (auth && !recaptchaVerifier) {
-                recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    'size': 'normal', // "normal" və ya "invisible" istifadə edin. Normal daha etibarlıdır.
-                    'callback': (response) => {
-                        // reCAPTCHA təsdiq edildikdə bu geri zəng işə düşür
-                        console.log("reCAPTCHA təsdiqləndi.");
-                    },
-                    'expired-callback': () => {
-                        // reCAPTCHA vaxtı bitdikdə
-                        showMessage("Təhlükəsizlik təsdiqi vaxtı bitdi. Yenidən cəhd edin.");
-                        recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
-                    }
-                });
-                recaptchaVerifier.render().catch(error => console.error("reCAPTCHA render xətası:", error));
-            }
-        }
-
-        // --- Autentifikasiya Prosesi ---
-
-        /**
-         * 1-ci addım: Telefon nömrəsinə təsdiqləmə kodu göndərmək
-         */
-        phoneForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const fullPhoneNumber = countryCode.value + phoneNumberInput.value.trim();
-
-            if (!fullPhoneNumber) {
-                showMessage("Zəhmət olmasa, tam telefon nömrənizi daxil edin.");
-                return;
-            }
-
-            // UI-ı bloklayın
-            sendCodeBtn.disabled = true;
-            sendCodeBtn.textContent = 'Kod Göndərilir...';
-            
-            try {
-                // Təsdiqləmə kodunu göndərin
-                confirmationResult = await signInWithPhoneNumber(auth, fullPhoneNumber, recaptchaVerifier);
-                
-                // UI-ı 2-ci addıma keçirin
-                targetPhoneDisplay.textContent = fullPhoneNumber;
-                phoneForm.classList.add('hidden');
-                otpForm.classList.remove('hidden');
-                otpCodeInput.focus();
-
-            } catch (error) {
-                console.error("Kod göndərmə xətası:", error);
-                let message = "Kod göndərilmədi. Xahiş edirik, nömrəni və reCAPTCHA-nı yoxlayın.";
-                
-                if (error.code === 'auth/invalid-phone-number') {
-                    message = "Daxil edilmiş nömrə formatı yanlışdır.";
-                } else if (error.code === 'auth/too-many-requests') {
-                    message = "Çoxlu cəhd edildi. Zəhmət olmasa bir az sonra yenidən cəhd edin.";
-                }
-
-                showMessage(message);
-                
-                // reCAPTCHA-nı yeniləyin
-                if (recaptchaVerifier) {
-                   recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
-                }
-                resetFlow(); // Xəta olduqda geri qayıt
-            } finally {
-                sendCodeBtn.disabled = false;
-                sendCodeBtn.textContent = 'Kodu Göndər';
-            }
-        });
-
-        /**
-         * 2-ci addım: OTP kodu ilə daxil olmaq
-         */
-        otpForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const otpCode = otpCodeInput.value.trim();
-
-            if (!otpCode || confirmationResult === null) {
-                showMessage("Zəhmət olmasa, kodu və ya telefon nömrəsini yoxlayın.");
-                return;
-            }
-            
-            // UI-ı bloklayın
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Təsdiqlənir...';
-
-            try {
-                // Kodu təsdiqləyin
-                const credential = await confirmationResult.confirm(otpCode);
-                const user = credential.user;
-                
-                // Autentifikasiya uğurludur, UI onAuthStateChanged tərəfindən idarə olunacaq
-
-            } catch (error) {
-                console.error("Kod Təsdiqləmə Xətası:", error);
-                let message = "Daxil edilən kod yanlışdır və ya vaxtı bitmişdir.";
-                
-                if (error.code === 'auth/invalid-verification-code') {
-                    message = "Yanlış təsdiqləmə kodu.";
-                }
-
-                showMessage(message);
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = 'Təsdiqlə';
-            }
-        });
-        
-        /**
-         * Prosesi sıfırlayın (Başlanğıc formasına qayıdın)
-         */
-        window.resetFlow = function() {
-            phoneForm.classList.remove('hidden');
-            otpForm.classList.add('hidden');
-            otpCodeInput.value = '';
-            phoneNumberInput.focus();
-        }
-
-
-        // --- UI Nəzarəti ---
-
-        /**
-         * İstifadəçinin login vəziyyətinə əsasən UI-ı dəyişdirin.
-         * @param {string | null} userIdentifier - İstifadəçinin telefon nömrəsi və ya UID.
-         */
-        function checkAuth(userIdentifier) {
-            if (userIdentifier && userIdentifier !== 'anonim') {
-                authFormSection.classList.add('hidden');
-                homeSection.classList.remove('hidden');
-                userIdDisplay.innerText = userIdentifier;
-                document.getElementById('pageTitle').innerText = "Hesabınız";
+            // Kimlik doğrulama tokenı varsa onunla giriş yap, yoksa anonim giriş yap
+            if (initialAuthToken) {
+                await signInWithCustomToken(auth, initialAuthToken);
             } else {
-                authFormSection.classList.remove('hidden');
-                homeSection.classList.add('hidden');
-                document.getElementById('pageTitle').innerText = "Telefon ilə Giriş";
-                // Giriş formasına qayıdarkən prosesi sıfırlayın
-                resetFlow(); 
+                await signInAnonymously(auth);
             }
-        }
 
-        // --- Çıxış Funksiyası ---
+            // Kimlik doğrulama durumu değiştiğinde kullanıcı ID'sini al ve geçmişi yükle
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent = `Kullanıcı ID: ${userId}`;
+                    listenToPdfHistory();
+                } else {
+                    // Anonim kullanıcı dahi olsa bir ID olmalı
+                    userId = crypto.randomUUID(); 
+                    userIdDisplay.textContent = `Kullanıcı ID: (Anonim - Veri Kaydı Yok)`;
+                    console.log("Kullanıcı anonim olarak giriş yaptı.");
+                }
+            });
+
+        } catch (error) {
+            console.error("Firebase başlatma veya kimlik doğrulama hatası:", error);
+            showMessage("Uygulama başlatılırken bir hata oluştu.", true);
+        }
+    }
+
+    // PDF Geçmişini Firestore'a kaydetme
+    async function savePdfHistory(fileName) {
+        if (!db || !userId) return; // Güvenlik kontrolü
+
+        const path = `/artifacts/${appId}/users/${userId}/pdf_history`;
+        const historyCollection = collection(db, path);
         
-        window.logout = async function() {
-            try {
-                await signOut(auth);
-                // checkAuth onAuthStateChanged tərəfindən avtomatik işə düşəcək
-                showMessage("Uğurla çıxış etdiniz.");
-            } catch (error) {
-                console.error("Çıxış Xətası:", error);
-                showMessage("Çıxış zamanı xəta baş verdi.");
+        try {
+            // Firestore'a kaydetme işlemi
+            await addDoc(historyCollection, {
+                name: fileName,
+                openedAt: new Date().getTime(),
+            });
+        } catch (error) {
+            console.error("Geçmiş kaydı başarısız:", error);
+            // Hata mesajını göster ancak uygulamanın çökmesini engelle
+            throw new Error("Geçmiş kaydedilemedi. Ağ/Veritabanı hatası."); 
+        }
+    }
+
+    // PDF Geçmişini silme
+    async function deletePdfHistory(docId) {
+        if (!db || !userId) return;
+
+        const path = `/artifacts/${appId}/users/${userId}/pdf_history/${docId}`;
+        
+        try {
+            await deleteDoc(doc(db, path));
+            showMessage("Geçmiş kaydı silindi.", false);
+        } catch (error) {
+            console.error("Silme başarısız:", error);
+            showMessage("Silme işlemi başarısız oldu.", true);
+        }
+    }
+
+    // PDF Geçmişini dinleme ve arayüze yükleme
+    function listenToPdfHistory() {
+        if (!db || !userId) return;
+
+        const path = `/artifacts/${appId}/users/${userId}/pdf_history`;
+        const historyCollection = collection(db, path);
+        const q = query(historyCollection, orderBy("openedAt", "desc"));
+
+        onSnapshot(q, (snapshot) => {
+            historyList.innerHTML = ''; 
+            if (snapshot.empty) {
+                historyList.innerHTML = '<p class="text-gray-500 p-4 text-center text-sm">Hiç geçmiş kaydı yok.</p>';
+                return;
             }
+
+            snapshot.docs.forEach(docSnapshot => {
+                const data = docSnapshot.data();
+                const docId = docSnapshot.id;
+                const date = new Date(data.openedAt).toLocaleString('tr-TR');
+
+                const listItem = document.createElement('div');
+                listItem.className = 'flex justify-between items-center p-3 border-b border-gray-100 hover:bg-light-blue transition duration-150';
+                listItem.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800 break-words">${data.name}</p>
+                        <p class="text-xs text-gray-500 mt-1">${date}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <!-- Açma Butonu (Dosya olmadığı için sadece bilgilendirme) -->
+                        <button data-name="${data.name}" data-action="open"
+                            class="bg-secondary-blue text-white p-2 rounded-full hover:bg-primary-blue transition focus:outline-none w-8 h-8 flex items-center justify-center"
+                            title="Tekrar Aç">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                        <!-- Silme Butonu -->
+                        <button data-id="${docId}" data-action="delete"
+                            class="bg-error-red text-white p-2 rounded-full hover:bg-red-700 transition focus:outline-none w-8 h-8 flex items-center justify-center"
+                            title="Kaydı Sil">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                historyList.appendChild(listItem);
+            });
+        }, (error) => {
+            console.error("Geçmişi dinlerken hata:", error);
+            showMessage("Geçmiş verileri yüklenemedi.", true);
+        });
+    }
+
+    // --- PDF.JS VE ARACILAR ---
+    
+    /**
+     * Özel bir hata/bilgi mesajı gösterir.
+     * @param {string} text Gösterilecek mesaj metni.
+     */
+    function showMessage(text, isError = true) {
+      messageBox.textContent = text;
+      const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 py-3 px-6 rounded-lg shadow-2xl opacity-0 transition-all duration-500 z-50 transform -translate-y-2 text-white';
+      messageBox.className = isError 
+        ? `${baseClasses} bg-error-red`
+        : `${baseClasses} bg-primary-blue`;
+
+      messageBox.style.opacity = '1';
+      messageBox.style.transform = 'translateX(-50%) translateY(0)';
+      
+      setTimeout(() => {
+        messageBox.style.opacity = '0';
+        messageBox.style.transform = 'translateX(-50%) translateY(-20px)';
+      }, 4000); 
+    }
+
+    // Dropzone'a tıklanınca dosya seçme penceresini açar
+    dropzone.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/pdf';
+      input.onchange = e => {
+        if (e.target.files.length > 0) {
+          openPDF(e.target.files[0]);
+        }
+      };
+      input.click();
+    });
+
+    // Sürükleme olayları
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('border-secondary-blue', 'bg-light-blue');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-secondary-blue', 'bg-light-blue');
+    });
+
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('border-secondary-blue', 'bg-light-blue');
+      
+      const file = e.dataTransfer.files[0];
+      
+      if (file && file.type === 'application/pdf') {
+        openPDF(file);
+      } else {
+        showMessage('Hata: Lütfen geçerli bir PDF dosyası bırakın.');
+      }
+    });
+
+    /**
+     * Seçilen PDF dosyasını okur ve sayfalarını canvas'a render eder.
+     * @param {File} file Görüntülenecek PDF File objesi.
+     */
+    async function openPDF(file) {
+      // Yükleniyor durumunu başlat
+      loadingText.classList.remove('hidden');
+      dropzone.style.pointerEvents = 'none'; 
+      pdfRenderer.innerHTML = ''; 
+      closeHistoryPanel(); // Geçmiş panelini kapat
+
+      try {
+        const reader = new FileReader();
+        const pdfData = await new Promise((resolve, reject) => {
+            reader.onload = (e) => resolve(new Uint8Array(e.target.result));
+            reader.onerror = (error) => reject(new Error("Dosya okuma hatası."));
+            reader.readAsArrayBuffer(file);
+        });
+        
+        const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+        const pdf = await loadingTask.promise;
+
+        loadingText.textContent = `PDF Yükleniyor... ${pdf.numPages} sayfa işleniyor.`;
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            
+            // Maksimum genişliği al (800px veya kapsayıcı genişliği)
+            const maxPageWidth = Math.min(pdfRenderer.clientWidth - 32, 800); 
+            
+            // Sayfanın 1 ölçekteki temel görünüm alanını hesapla
+            const baseViewport = page.getViewport({ scale: 1 });
+            
+            // Gerekli ölçeği hesapla (ekrana sığdırmak için)
+            const desiredScale = maxPageWidth / baseViewport.width;
+            
+            // Görüntü alanı ve Canvas boyutunu istenen ölçeğe ayarla (Basit ve Stabil Yöntem)
+            const viewport = page.getViewport({ scale: desiredScale });
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page-canvas';
+            
+            // Canvas'ın fiziksel ve CSS boyutlarını ayarla (1:1 stabilite)
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            canvas.style.width = `${viewport.width}px`;
+            canvas.style.height = `${viewport.height}px`;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Kritik: Yüksek DPI çarpanı KALDIRILDI. Bu, bembeyaz ekran sorununu çözmeli.
+            
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport // Doğrudan istenen ölçekte çizim yap
+            };
+            await page.render(renderContext).promise; 
+
+            pdfRenderer.appendChild(canvas);
         }
 
-        // Səhifə yükləndikdə başlatın
-        window.addEventListener('load', initializeFirebase);
-    </script>
+        // Başarılı yüklemede arayüzü güncelle
+        loadingText.classList.add('hidden');
+        dropzone.style.display = 'none';
+        pdfRenderer.classList.remove('hidden');
+        backButton.classList.remove('hidden');
+        historyButton.classList.add('hidden'); // PDF açıkken Geçmiş butonunu gizle
+        dropzone.style.pointerEvents = 'auto'; 
+        loadingText.textContent = `PDF Yükleniyor... Lütfen bekleyin.`; // Reset text
+        
+        // Geçmişi kaydetmeyi bekliyoruz. Hata olursa aşağıda yakalanacak.
+        if (userId) {
+            await savePdfHistory(file.name);
+        }
+
+        showMessage(`PDF başarıyla yüklendi (${pdf.numPages} sayfa).`, false);
+
+      } catch (error) {
+        // Hata oluştuğunda stabil bir şekilde arayüzü sıfırla
+        console.error("PDF yüklenirken kritik bir hata oluştu:", error);
+        loadingText.classList.add('hidden');
+        dropzone.style.pointerEvents = 'auto'; 
+        
+        // Arayüzü orijinal haline döndür
+        pdfRenderer.classList.add('hidden');
+        pdfRenderer.innerHTML = '';
+        dropzone.style.display = 'flex'; 
+        backButton.classList.add('hidden');
+        historyButton.classList.remove('hidden'); // Geçmiş butonunu tekrar göster
+        loadingText.textContent = `PDF Yükleniyor... Lütfen bekleyin.`; // Reset text
+        
+        // Kullanıcıya görünür hata mesajı
+        showMessage(`Hata: PDF yüklenemedi. Dosya bozuk veya render hatası.`, true);
+      }
+    }
+
+    // PDF görüntüleyicisini kapatır ve yükleme ekranına geri döner.
+    window.closePDF = function() {
+        pdfRenderer.classList.add('hidden');
+        pdfRenderer.innerHTML = ''; 
+        dropzone.style.display = 'flex'; 
+        backButton.classList.add('hidden');
+        historyButton.classList.remove('hidden'); // Geçmiş butonunu tekrar göster
+        loadingText.classList.add('hidden');
+    }
+
+    // --- GEÇMİŞ PANELİ İŞLEMLERİ ---
+
+    function openHistoryPanel() {
+        historyPanel.classList.add('open');
+        historyOverlay.style.display = 'block';
+    }
+
+    function closeHistoryPanel() {
+        historyPanel.classList.remove('open');
+        historyOverlay.style.display = 'none';
+    }
+
+    // Geçmiş butonuna tıklandığında paneli aç/kapa
+    historyButton.addEventListener('click', openHistoryPanel);
+    historyOverlay.addEventListener('click', closeHistoryPanel);
+
+    // Geçmiş listesindeki butonlara tıklama işleyicisi
+    historyList.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const action = target.getAttribute('data-action');
+        const docId = target.getAttribute('data-id');
+        const fileName = target.getAttribute('data-name');
+
+        if (action === 'delete') {
+            deletePdfHistory(docId);
+        } else if (action === 'open') {
+            closeHistoryPanel();
+            // Kullanıcıya dosyanın tekrar yüklenmesi gerektiğini bildir
+            showMessage(`"${fileName}" dosyasını tekrar açmak için lütfen orijinal dosyayı yeniden yükleyin. Veritabanında sadece adı saklanıyor.`, false);
+        }
+    });
+
+
+    // Sayfa yüklendiğinde Firebase'i başlat
+    window.onload = initializeFirebase;
+  </script>
 </body>
 </html>
 
