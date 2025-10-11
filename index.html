@@ -1,325 +1,357 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genel Not Panosu (Herkese Açık)</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Masroxx Telefon ilə Giriş & Qeydiyyat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
-        .note-card { transition: all 0.2s ease-in-out; }
-        .note-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); }
-        /* Özel stil: Butonları mobil cihazlarda tam genişlikte yapar */
-        @media (max-width: 640px) {
-            #addNoteForm button { width: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1a202c; /* Tünd fon rəngi */
+            color: #e2e8f0; /* Açıq mətn rəngi */
+        }
+        .input-style {
+            @apply w-full px-4 py-3 bg-gray-700 text-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-300;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8">
-    
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-10">
-            <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-800">Genel Not Panosu</h1>
-            <p class="mt-2 text-lg text-gray-600">Buraya eklenen notları herkes anında görür!</p>
-            <p class="mt-4 text-sm text-gray-400">Kullanıcı Kimliğiniz: <span id="userIdDisplay" class="font-mono text-xs bg-gray-200 px-2 py-1 rounded">Yükleniyor...</span></p>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Əsas Kapsayıcı (Container) -->
+    <div id="app" class="w-full max-w-md bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+
+        <!-- Başlıq -->
+        <header class="bg-gray-700 text-center py-6 px-4">
+            <h1 id="pageTitle" class="text-3xl font-bold text-white">Xoş gəlmisiniz!</h1>
         </header>
 
-        <!-- Yeni Not Ekleme Formu -->
-        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl mb-10 border-t-4 border-blue-500">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Yeni Not Ekle</h2>
-            <form id="addNoteForm" onsubmit="addNote(event)">
-                <textarea 
-                    id="noteContent" 
-                    rows="4" 
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none text-gray-800"
-                    placeholder="Notunuzu buraya yazın..." 
-                    required></textarea>
+        <!-- Forma Bölməsi (Telefon Girişi) -->
+        <main id="authFormSection" class="p-8 space-y-6 transition-transform duration-500 ease-in-out">
+            <h2 id="formTitle" class="text-2xl font-semibold text-center text-gray-100">Telefonla Daxil ol</h2>
+            
+            <!-- Telefon Nömrəsi Forması (1-ci Addım) -->
+            <form id="phoneForm" class="space-y-4">
+                <p class="text-sm text-gray-400 text-center">Təsdiqləmə kodunu almaq üçün telefon nömrənizi daxil edin.</p>
+                <div class="flex space-x-2">
+                    <!-- Ölkə Kodu Seçimi -->
+                    <div class="w-1/3">
+                        <label for="countryCode" class="sr-only">Ölkə Kodu</label>
+                        <select id="countryCode" class="input-style pr-2">
+                            <option value="+994" selected>+994 (AZ)</option>
+                            <option value="+90">+90 (TR)</option>
+                            <option value="+7">+7 (RU/KZ)</option>
+                            <option value="+44">+44 (UK)</option>
+                            <option value="+1">+1 (USA)</option>
+                            <!-- Əlavə ölkələr əlavə edilə bilər -->
+                        </select>
+                    </div>
+                    <!-- Telefon Nömrəsi Girişi -->
+                    <div class="w-2/3">
+                        <label for="phoneNumber" class="sr-only">Telefon Nömrəsi</label>
+                        <input type="tel" id="phoneNumber" placeholder="Nömrə (məs: 501234567)" required
+                               class="input-style">
+                    </div>
+                </div>
                 
-                <button 
-                    type="submit" 
-                    id="saveButton"
-                    class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
-                    disabled>
-                    Kaydet ve Herkese Göster
+                <!-- reCAPTCHA görünməz konteyneri -->
+                <div id="recaptcha-container" class="mt-4 flex justify-center"></div>
+
+                <button type="submit" id="sendCodeBtn"
+                        class="w-full py-3 mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out disabled:bg-gray-600">
+                    Kodu Göndər
                 </button>
             </form>
-        </div>
 
-        <!-- Notlar Listesi -->
-        <div class="mb-6">
-            <h2 class="text-3xl font-bold text-gray-700 mb-4">Mevcut Notlar</h2>
-            <div id="loadingIndicator" class="text-center p-8 text-gray-500">
-                <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                <p class="mt-2">Notlar yükleniyor...</p>
+            <!-- OTP Təsdiqləmə Forması (2-ci Addım) - Əvvəlcə gizli -->
+            <form id="otpForm" class="space-y-4 hidden">
+                <p class="text-sm text-gray-400 text-center" id="otp-instruction">
+                    **<span id="target-phone"></span>** nömrəsinə göndərilən 6 rəqəmli kodu daxil edin.
+                </p>
+                <div>
+                    <label for="otpCode" class="sr-only">Təsdiqləmə Kodu (OTP)</label>
+                    <input type="number" id="otpCode" placeholder="Təsdiqləmə Kodu" required
+                           class="input-style text-center text-xl tracking-wider" maxlength="6">
+                </div>
+                <button type="submit" id="verifyBtn"
+                        class="w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out disabled:bg-gray-600">
+                    Təsdiqlə
+                </button>
+                <button type="button" onclick="resetFlow()"
+                        class="w-full py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200">
+                    Nömrəni Dəyişdir
+                </button>
+            </form>
+        </main>
+
+        <!-- Əsas səhifə görünüşü (Giriş Uğurlu olduqda) -->
+        <main id="homeSection" class="hidden p-8 space-y-6">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold text-emerald-400">Giriş Uğurludur! 🎉</h2>
+                <p id="userPhoneDisplay" class="text-lg text-gray-300 mt-2 font-mono break-all"></p>
+                <p class="text-sm text-gray-400">Söhbət proqramı yüklənməyə hazırdır.</p>
             </div>
-            <div id="notesContainer" class="space-y-4">
-                <!-- Notlar buraya JavaScript ile eklenecek -->
+            <div class="mt-8 text-center">
+                <button onclick="logout()"
+                        class="py-3 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-all duration-300 ease-in-out">
+                    Çıxış
+                </button>
             </div>
-            <p id="noNotesMessage" class="hidden text-center p-8 text-gray-500 bg-white rounded-xl mt-4 border border-dashed">Henüz hiç not yok. İlk notu siz ekleyin!</p>
+        </main>
+
+        <!-- Mesaj Qutusu (Modal) -->
+        <div id="messageBox" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
+            <div class="bg-gray-700 text-white p-6 rounded-xl shadow-2xl text-center max-w-xs w-full">
+                <p id="messageText" class="text-lg mb-4"></p>
+                <button onclick="hideMessage()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold">Bağla</button>
+            </div>
         </div>
-
-        <!-- Dinamik Hata/Bilgi Mesajları için Kapsayıcı -->
-        <div id="messageContainer"></div>
-
     </div>
 
-    <!-- Firebase Kütüphaneleri -->
+    <!-- Firebase SDK İdxalları -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            query, 
-            onSnapshot, 
-            addDoc, 
-            deleteDoc, 
-            doc,
-            setLogLevel
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithPhoneNumber, signInWithCustomToken, onAuthStateChanged, RecaptchaVerifier, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase ve Uygulama Konfigürasyonları
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Global değişkenler
-        let db;
-        let auth;
-        let currentUserId = null;
+        // Global dəyişənlər
+        let auth, db;
+        let confirmationResult = null; // Təsdiqləmə nəticəsini saxlamaq üçün
+        let recaptchaVerifier = null;
         let isAuthReady = false;
 
-        // DOM Elementleri
-        const notesContainer = document.getElementById('notesContainer');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const saveButton = document.getElementById('saveButton');
-        const noNotesMessage = document.getElementById('noNotesMessage');
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        const messageContainer = document.getElementById('messageContainer');
+        // HTML elementləri
+        const authFormSection = document.getElementById('authFormSection');
+        const homeSection = document.getElementById('homeSection');
+        const phoneForm = document.getElementById('phoneForm');
+        const otpForm = document.getElementById('otpForm');
+        const countryCode = document.getElementById('countryCode');
+        const phoneNumberInput = document.getElementById('phoneNumber');
+        const otpCodeInput = document.getElementById('otpCode');
+        const sendCodeBtn = document.getElementById('sendCodeBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const userIdDisplay = document.getElementById('userPhoneDisplay');
+        const targetPhoneDisplay = document.getElementById('target-phone');
+        
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
 
-        /**
-         * Kullanıcıya bilgi/hata mesajı gösterir (alert yerine).
-         * @param {string} message - Gösterilecek mesaj.
-         * @param {string} type - 'error' veya 'info'
-         */
-        function alertMessage(message, type = 'error') {
-            console.warn("UYARI:", message);
-            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-            
-            const messageEl = document.createElement('div');
-            messageEl.className = `fixed bottom-4 right-4 ${bgColor} text-white p-4 rounded-xl shadow-2xl z-50 opacity-0 transition-opacity duration-300 transform translate-y-2`;
-            messageEl.textContent = message;
-            
-            messageContainer.appendChild(messageEl);
+        // Firebase Konfiqurasiyası (Canvas mühitindən gəlir)
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-            // Animasyonla görünür yap
-            setTimeout(() => {
-                messageEl.classList.remove('opacity-0', 'translate-y-2');
-                messageEl.classList.add('opacity-100', 'translate-y-0');
-            }, 10);
+        // --- Mesaj Qutusu Funksiyaları ---
 
-            // Belirli bir süre sonra kaybol
-            setTimeout(() => {
-                messageEl.classList.remove('opacity-100', 'translate-y-0');
-                messageEl.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => messageEl.remove(), 300); // Elementi kaldır
-            }, 6000);
+        function showMessage(msg) {
+            messageText.innerText = msg;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
         }
 
-        /**
-         * Firestore bağlantısını başlatır ve kimlik doğrulamasını gerçekleştirir.
-         */
+        window.hideMessage = function() {
+            messageBox.classList.remove('flex');
+            messageBox.classList.add('hidden');
+        }
+
+        // --- Firebase Başlatma və Təsdiqləmə ---
+
         async function initializeFirebase() {
+            if (!firebaseConfig) {
+                showMessage("Xəta: Firebase konfiqurasiyası tapılmadı!");
+                return;
+            }
+            
             try {
-                // Konfigürasyonun varlığını kontrol et
-                if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
-                    throw new Error("Missing Firebase Configuration. Please run the app in the Canvas Preview environment.");
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // Canvas xüsusi tokeni ilə daxil olmağa cəhd edin
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
                 }
 
-                // Firebase uygulamasını başlat
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // Firestore log seviyesini ayarla (debug amaçlı)
-                setLogLevel('Debug'); 
-
-                // Kimlik doğrulama dinleyicisi
-                onAuthStateChanged(auth, async (user) => {
+                // İstifadəçi vəziyyətini dinləyin
+                onAuthStateChanged(auth, (user) => {
                     if (user) {
-                        currentUserId = user.uid;
-                        userIdDisplay.textContent = currentUserId;
-                        console.log("Kullanıcı kimliği alındı:", currentUserId);
                         isAuthReady = true;
-                        // Butonu etkinleştir ve notları yüklemeye başla
-                        saveButton.disabled = false; 
-                        listenForNotes();
+                        // Əgər telefon nömrəsi varsa, onu göstər, yoxsa UID göstər
+                        const userIdentifier = user.phoneNumber || user.uid; 
+                        checkAuth(userIdentifier);
                     } else {
-                        // Eğer token yoksa anonim olarak giriş yap
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        isAuthReady = true;
+                        checkAuth(null);
+                        // reCAPTCHA-nı yalnız istifadəçi daxil olmadıqda başlatın
+                        setupRecaptcha();
                     }
                 });
+
             } catch (error) {
-                console.error("Firebase başlatılırken hata oluştu:", error);
-                
-                if (error.message.includes("Missing Firebase Configuration")) {
-                    userIdDisplay.textContent = "HATA (Eksik Konfigürasyon)";
-                    alertMessage("⚠️ ÖNEMLİ HATA: Bu uygulama Firebase ayarlarını otomatik olarak aldığından, harici bir linkte düzgün çalışmaz. Lütfen dosyayı buradaki 'Önizle' butonunda deneyin.", 'error');
-                } else {
-                    userIdDisplay.textContent = "HATA (Firebase Bağlantısı)";
-                    alertMessage("Hata: Veritabanı bağlantısı kurulamadı. Lütfen konsolu kontrol edin.", 'error');
-                }
+                console.error("Firebase Başlatma Xətası:", error);
+                showMessage(`Bağlantı Xətası: ${error.message}`);
+                // reCAPTCHA-nı başlatmaq üçün əl ilə çağırın, çünki onAuthStateChanged işləməyə bilər
+                setupRecaptcha();
             }
         }
 
-        /**
-         * Notları gerçek zamanlı olarak dinler ve arayüzü günceller.
-         */
-        function listenForNotes() {
-            if (!db || !isAuthReady) return;
+        // --- reCAPTCHA Təyin etmək ---
 
-            // Veritabanı yolu: /artifacts/{appId}/public/data/public_notes
-            const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
-            const notesRef = collection(db, notesCollectionPath);
-            
-            // Sıralama yapmadan tüm notları çek (Firestore index gereksinimlerinden kaçınmak için)
-            const q = query(notesRef); 
-
-            console.log("Notlar koleksiyonu dinleniyor:", notesCollectionPath);
-
-            onSnapshot(q, (snapshot) => {
-                loadingIndicator.classList.add('hidden'); 
-                notesContainer.innerHTML = ''; 
-                const notes = [];
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    notes.push({ id: doc.id, ...data });
+        function setupRecaptcha() {
+            // Əgər auth və reCAPTCHA hələ təyin olunmayıbsa
+            if (auth && !recaptchaVerifier) {
+                recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    'size': 'normal', // "normal" və ya "invisible" istifadə edin. Normal daha etibarlıdır.
+                    'callback': (response) => {
+                        // reCAPTCHA təsdiq edildikdə bu geri zəng işə düşür
+                        console.log("reCAPTCHA təsdiqləndi.");
+                    },
+                    'expired-callback': () => {
+                        // reCAPTCHA vaxtı bitdikdə
+                        showMessage("Təhlükəsizlik təsdiqi vaxtı bitdi. Yenidən cəhd edin.");
+                        recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
+                    }
                 });
-
-                // Notları manuel olarak zamana göre (timestamp) ters sırada sırala (En yeni üstte)
-                notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-                if (notes.length === 0) {
-                    noNotesMessage.classList.remove('hidden');
-                } else {
-                    noNotesMessage.classList.add('hidden');
-                    notes.forEach(note => {
-                        notesContainer.appendChild(createNoteElement(note));
-                    });
-                }
-            }, (error) => {
-                console.error("Notları dinlerken hata:", error);
-                alertMessage("Hata: Notları çekerken bir sorun oluştu. Lütfen konsolu kontrol edin.", 'error');
-                loadingIndicator.classList.add('hidden');
-            });
+                recaptchaVerifier.render().catch(error => console.error("reCAPTCHA render xətası:", error));
+            }
         }
 
+        // --- Autentifikasiya Prosesi ---
+
         /**
-         * Yeni bir notu Firestore'a ekler.
+         * 1-ci addım: Telefon nömrəsinə təsdiqləmə kodu göndərmək
          */
-        window.addNote = async function(e) {
+        phoneForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!db || !currentUserId) return;
+            
+            const fullPhoneNumber = countryCode.value + phoneNumberInput.value.trim();
 
-            const noteContentEl = document.getElementById('noteContent');
-            const content = noteContentEl.value.trim();
-
-            if (content.length === 0) return;
-
-            saveButton.disabled = true;
-            saveButton.textContent = 'Kaydediliyor...';
-
-            try {
-                const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
-                
-                await addDoc(collection(db, notesCollectionPath), {
-                    content: content,
-                    timestamp: Date.now(),
-                    userId: currentUserId,
-                });
-
-                noteContentEl.value = ''; // Input'u temizle
-                alertMessage("Not başarıyla kaydedildi ve herkese açık!", 'info');
-            } catch (error) {
-                console.error("Not eklenirken hata oluştu:", error);
-                alertMessage("Hata: Notunuz kaydedilemedi.", 'error');
-            } finally {
-                saveButton.disabled = false;
-                saveButton.textContent = 'Kaydet ve Herkese Göster';
-            }
-        }
-
-        /**
-         * Notu Firestore'dan siler.
-         */
-        window.deleteNote = async function(noteId) {
-            if (!db || !currentUserId) return;
-
-            // Bu bir onay penceresi işlevidir, tarayıcı 'alert' veya 'confirm' kullanmaz
-            const confirmation = window.prompt("Bu notu silmek istediğinizden emin misiniz? Silmek için 'EVET' yazın.");
-            if (confirmation !== 'EVET') {
+            if (!fullPhoneNumber) {
+                showMessage("Zəhmət olmasa, tam telefon nömrənizi daxil edin.");
                 return;
             }
 
+            // UI-ı bloklayın
+            sendCodeBtn.disabled = true;
+            sendCodeBtn.textContent = 'Kod Göndərilir...';
+            
             try {
-                const notesCollectionPath = `/artifacts/${appId}/public/data/public_notes`;
-                const noteRef = doc(db, notesCollectionPath, noteId);
-                await deleteDoc(noteRef);
-                alertMessage("Not başarıyla silindi.", 'info');
+                // Təsdiqləmə kodunu göndərin
+                confirmationResult = await signInWithPhoneNumber(auth, fullPhoneNumber, recaptchaVerifier);
+                
+                // UI-ı 2-ci addıma keçirin
+                targetPhoneDisplay.textContent = fullPhoneNumber;
+                phoneForm.classList.add('hidden');
+                otpForm.classList.remove('hidden');
+                otpCodeInput.focus();
+
             } catch (error) {
-                console.error("Not silinirken hata oluştu:", error);
-                alertMessage("Hata: Not silinemedi.", 'error');
+                console.error("Kod göndərmə xətası:", error);
+                let message = "Kod göndərilmədi. Xahiş edirik, nömrəni və reCAPTCHA-nı yoxlayın.";
+                
+                if (error.code === 'auth/invalid-phone-number') {
+                    message = "Daxil edilmiş nömrə formatı yanlışdır.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    message = "Çoxlu cəhd edildi. Zəhmət olmasa bir az sonra yenidən cəhd edin.";
+                }
+
+                showMessage(message);
+                
+                // reCAPTCHA-nı yeniləyin
+                if (recaptchaVerifier) {
+                   recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
+                }
+                resetFlow(); // Xəta olduqda geri qayıt
+            } finally {
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.textContent = 'Kodu Göndər';
             }
-        }
+        });
+
+        /**
+         * 2-ci addım: OTP kodu ilə daxil olmaq
+         */
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const otpCode = otpCodeInput.value.trim();
+
+            if (!otpCode || confirmationResult === null) {
+                showMessage("Zəhmət olmasa, kodu və ya telefon nömrəsini yoxlayın.");
+                return;
+            }
+            
+            // UI-ı bloklayın
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Təsdiqlənir...';
+
+            try {
+                // Kodu təsdiqləyin
+                const credential = await confirmationResult.confirm(otpCode);
+                const user = credential.user;
+                
+                // Autentifikasiya uğurludur, UI onAuthStateChanged tərəfindən idarə olunacaq
+
+            } catch (error) {
+                console.error("Kod Təsdiqləmə Xətası:", error);
+                let message = "Daxil edilən kod yanlışdır və ya vaxtı bitmişdir.";
+                
+                if (error.code === 'auth/invalid-verification-code') {
+                    message = "Yanlış təsdiqləmə kodu.";
+                }
+
+                showMessage(message);
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Təsdiqlə';
+            }
+        });
         
         /**
-         * Not nesnesini HTML elementine dönüştürür.
+         * Prosesi sıfırlayın (Başlanğıc formasına qayıdın)
          */
-        function createNoteElement(note) {
-            const card = document.createElement('div');
-            card.className = 'note-card bg-white p-5 rounded-xl shadow-lg border-l-4 border-blue-400 flex justify-between items-start';
-            card.setAttribute('data-id', note.id);
-
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'flex-grow mr-4';
-
-            const text = document.createElement('p');
-            text.className = 'text-gray-800 text-lg whitespace-pre-wrap';
-            text.textContent = note.content;
-
-            const meta = document.createElement('small');
-            const date = new Date(note.timestamp).toLocaleString('tr-TR');
-            meta.className = 'block mt-2 text-gray-400 text-xs';
-            meta.innerHTML = `Ekleyen: <span class="font-mono">${note.userId}</span> | Tarih: ${date}`;
-
-            contentDiv.appendChild(text);
-            contentDiv.appendChild(meta);
-            
-            card.appendChild(contentDiv);
-
-            // Silme butonu (Herkesin silmesine izin verilir, herkesin katkıda bulunabileceği bir pano olduğu için)
-            const deleteButton = document.createElement('button');
-            deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400 hover:text-red-600 transition" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
-                                      </svg>`;
-            deleteButton.title = "Notu Sil (Herkes Silebilir)";
-            deleteButton.className = 'flex-shrink-0 p-2 rounded-full hover:bg-red-100 transition';
-            deleteButton.onclick = () => deleteNote(note.id);
-            
-            card.appendChild(deleteButton);
-
-            return card;
+        window.resetFlow = function() {
+            phoneForm.classList.remove('hidden');
+            otpForm.classList.add('hidden');
+            otpCodeInput.value = '';
+            phoneNumberInput.focus();
         }
 
-        // Uygulamayı Başlat
-        window.onload = initializeFirebase;
+
+        // --- UI Nəzarəti ---
+
+        /**
+         * İstifadəçinin login vəziyyətinə əsasən UI-ı dəyişdirin.
+         * @param {string | null} userIdentifier - İstifadəçinin telefon nömrəsi və ya UID.
+         */
+        function checkAuth(userIdentifier) {
+            if (userIdentifier && userIdentifier !== 'anonim') {
+                authFormSection.classList.add('hidden');
+                homeSection.classList.remove('hidden');
+                userIdDisplay.innerText = userIdentifier;
+                document.getElementById('pageTitle').innerText = "Hesabınız";
+            } else {
+                authFormSection.classList.remove('hidden');
+                homeSection.classList.add('hidden');
+                document.getElementById('pageTitle').innerText = "Telefon ilə Giriş";
+                // Giriş formasına qayıdarkən prosesi sıfırlayın
+                resetFlow(); 
+            }
+        }
+
+        // --- Çıxış Funksiyası ---
+        
+        window.logout = async function() {
+            try {
+                await signOut(auth);
+                // checkAuth onAuthStateChanged tərəfindən avtomatik işə düşəcək
+                showMessage("Uğurla çıxış etdiniz.");
+            } catch (error) {
+                console.error("Çıxış Xətası:", error);
+                showMessage("Çıxış zamanı xəta baş verdi.");
+            }
+        }
+
+        // Səhifə yükləndikdə başlatın
+        window.addEventListener('load', initializeFirebase);
     </script>
 </body>
 </html>
