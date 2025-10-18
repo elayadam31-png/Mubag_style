@@ -1,237 +1,670 @@
-<!doctype html>
-<html lang="tr">
+<!DOCTYPE html>
+<html lang="az">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Keskin ve Stabil PDF Görüntüleyici</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Şəxsi AI Laboratoriya</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'Arial', 'sans-serif'],
-          },
-          colors: {
-            'primary-blue': '#0b63a3',
-            'secondary-blue': '#1e7dbd',
-            'light-blue': '#e0f2ff',
-            'error-red': '#d32f2f',
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background-color: #f5f7fb;
-      overflow: hidden;
-    }
-    #pdf-renderer {
-      flex-grow: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-    }
-    .pdf-page-canvas {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      border-radius: 6px;
-      background-color: white;
-      width: 100%;
-      max-width: 800px;
-      height: auto;
-    }
-    #history-panel {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 320px;
-      max-width: 85vw;
-      height: 100vh;
-      background-color: white;
-      transform: translateX(-100%);
-      transition: transform 0.3s ease-in-out;
-      z-index: 30;
-      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2);
-      display: flex;
-      flex-direction: column;
-    }
-    #history-panel.open { transform: translateX(0); }
-    #history-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 25;
-      display: none;
-    }
+    html, body, #app { height: 100%; margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    /* scrollbar styling */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+    /* code block scrollbar */
+    pre::-webkit-scrollbar { height: 8px; }
+    pre::-webkit-scrollbar-thumb { background: #374151; border-radius: 6px; }
+    /* small transitions */
+    .fade-in { animation: fadeIn .18s ease-in; }
+    @keyframes fadeIn { from {opacity:0; transform: translateY(4px)} to {opacity:1; transform: translateY(0)} }
   </style>
 </head>
-<body class="font-sans text-gray-900">
-  <!-- Üst Başlık -->
-  <header class="header-container text-white py-3 px-4 flex justify-between items-center">
-    <h1 class="text-lg font-semibold">PDF Görüntüleyici</h1>
-    <div class="space-x-3">
-      <button id="history-button" class="bg-secondary-blue px-3 py-2 rounded hover:bg-primary-blue">Geçmiş</button>
-      <button id="back-button" onclick="closePDF()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded hidden">Geri</button>
-    </div>
-  </header>
+<body class="bg-gradient-to-b from-gray-50 to-white">
+  <div id="app" class="h-full flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="hidden md:flex md:flex-col w-84 bg-gray-900 text-white shadow-lg">
+      <div class="p-6 border-b border-gray-800">
+        <h2 class="text-2xl font-extrabold text-indigo-300">Şəxsi AI Laboratoriya</h2>
+        <p class="text-xs text-gray-400 mt-1">Sənin AI profillərin və sohbetlərin</p>
+      </div>
 
-  <!-- PDF Yükleme Alanı -->
-  <div id="dropzone" class="flex flex-col flex-grow justify-center items-center border-2 border-dashed border-gray-300 text-center cursor-pointer transition bg-white hover:bg-light-blue">
-    <p class="text-gray-600">PDF dosyasını buraya bırak veya tıklayarak seç</p>
+      <div class="p-4 border-b border-gray-800">
+        <button id="btn-new-topic" class="w-full flex items-center justify-center gap-3 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          Yeni Mövzu Yarat
+        </button>
+      </div>
+
+      <nav id="topics-nav" class="flex-1 p-4 overflow-y-auto space-y-2">
+        <!-- topics -->
+      </nav>
+
+      <div class="p-4 border-t border-gray-800 text-xs text-gray-400">
+        Verilənlər lokalda saxlanılır · <span id="topic-count">0</span> mövzu
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Header (mobile) -->
+      <header class="md:hidden flex items-center justify-between p-4 bg-white border-b shadow-sm">
+        <div class="flex items-center gap-3">
+          <button id="btn-toggle-sidebar" class="p-2 rounded-md hover:bg-gray-100">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          </button>
+          <div>
+            <h1 id="header-title" class="text-lg font-bold text-indigo-700 truncate">Yeni Mövzu Yarat</h1>
+            <p id="header-sub" class="text-xs text-gray-500 truncate">AI şəxsiyyəti yoxdur</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="btn-clear-topics" class="text-xs text-gray-500 hover:text-gray-700">Bütününü sil</button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="flex-1 flex overflow-hidden">
+        <!-- Overlay for mobile sidebar -->
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-40 hidden z-30 md:hidden"></div>
+
+        <!-- Sidebar for mobile (clone) -->
+        <div id="sidebar-mobile" class="fixed left-0 top-0 bottom-0 transform -translate-x-full transition-transform duration-300 z-40 md:hidden">
+          <div class="w-72 bg-gray-900 text-white h-full flex flex-col shadow-xl">
+            <div class="p-6 border-b border-gray-800">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-lg font-bold text-indigo-300">Şəxsi AI Laboratoriya</h2>
+                  <p class="text-xs text-gray-400">Mobil menyu</p>
+                </div>
+                <button id="btn-close-sidebar-mobile" class="p-1 rounded hover:bg-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+              </div>
+            </div>
+
+            <div class="p-4">
+              <button id="btn-new-topic-mobile" class="w-full flex items-center justify-center gap-3 p-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition">
+                Yeni Mövzu Yarat
+              </button>
+            </div>
+
+            <nav id="topics-nav-mobile" class="p-4 overflow-y-auto flex-1 space-y-2">
+              <!-- topics mobile -->
+            </nav>
+
+            <div class="p-4 border-t border-gray-800 text-xs text-gray-400">
+              Verilənlər lokalda saxlanılır
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat area -->
+        <section class="flex-1 flex flex-col bg-gradient-to-b from-white to-gray-50">
+          <!-- messages -->
+          <div id="chat-messages" class="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 min-h-0">
+            <!-- messages will render here -->
+          </div>
+
+          <!-- input -->
+          <footer class="p-4 bg-white border-t">
+            <form id="chat-form" class="max-w-4xl mx-auto flex gap-3 items-center">
+              <input id="chat-input" type="text" class="flex-1 p-3 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Mesajınızı yazın..." autocomplete="off" />
+              <button id="send-button" type="submit" class="inline-flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition disabled:opacity-50" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" id="send-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+                Göndər
+              </button>
+            </form>
+          </footer>
+        </section>
+      </main>
+    </div>
   </div>
 
-  <!-- PDF Görüntüleme Alanı -->
-  <div id="pdf-renderer" class="hidden"></div>
+  <!-- New Topic Modal -->
+  <div id="new-topic-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-indigo-700">Yeni AI Mövzusu Yarat</h3>
+        <button id="modal-close" class="p-2 rounded hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
 
-  <!-- Yükleniyor Metni -->
-  <div id="loading-text" class="text-center text-gray-600 py-4 hidden">PDF Yükleniyor... Lütfen bekleyin.</div>
+      <p id="modal-error" class="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded hidden"></p>
 
-  <!-- Mesaj Kutusu -->
-  <div id="message-box" class="hidden"></div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-gray-700">Mövzu Adı</label>
+          <input id="topic-name-input" type="text" placeholder="Məsələn: JS Kod Eksperti" class="mt-1 w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-300" />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-700">AI Şəxsiyyəti (Sistem Təlimatı)</label>
+          <textarea id="system-prompt-input" rows="5" placeholder="Sən, yalnız kod yazan və izahatları qısa tutan, həvəsli bir JavaScript mütəxəssisisən." class="mt-1 w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-300"></textarea>
+        </div>
+      </div>
 
-  <!-- Geçmiş Paneli -->
-  <div id="history-panel">
-    <div class="flex justify-between items-center p-3 border-b">
-      <h2 class="font-semibold">Açılan PDF Geçmişi</h2>
-      <span id="user-id-display" class="text-xs text-gray-500"></span>
+      <div class="flex justify-end gap-3 mt-4">
+        <button id="modal-cancel" class="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">Ləğv Et</button>
+        <button id="modal-save" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Yadda Saxla və Başla</button>
+      </div>
     </div>
-    <div id="history-list" class="flex-grow overflow-y-auto"></div>
   </div>
-  <div id="history-overlay"></div>
 
-  <!-- SCRIPT -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, orderBy, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.mjs";
+  <script>
+    /* -------------------------
+       Konfiqurasiya
+       ------------------------- */
+    const API_MODEL = "gemini-2.5-flash-preview-09-2025";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent`;
+    let API_KEY = ""; // Buraya açar daxil et (isteğe bağlı). Boş isə test cavabı dönəcək.
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.mjs";
+    const TOPICS_KEY = 'chat_app_topics';
+    const ACTIVE_TOPIC_KEY = 'chat_app_active_topic';
+    const MESSAGE_PREFIX = 'chat_app_messages_';
 
-    // DOM öğeleri
-    const dropzone = document.getElementById('dropzone');
-    const pdfRenderer = document.getElementById('pdf-renderer');
-    const messageBox = document.getElementById('message-box');
-    const backButton = document.getElementById('back-button');
-    const loadingText = document.getElementById('loading-text');
-    const historyButton = document.getElementById('history-button');
-    const historyPanel = document.getElementById('history-panel');
-    const historyList = document.getElementById('history-list');
-    const historyOverlay = document.getElementById('history-overlay');
-    const userIdDisplay = document.getElementById('user-id-display');
+    let topics = [];
+    let activeTopicId = null;
+    let messages = []; // for active topic
+    let isLoading = false;
+    let isSidebarOpenMobile = false;
 
-    // Firebase
-    const firebaseConfig = {}; // Buraya kendi config'ini ekle
-    let app, db, auth, userId = null;
+    const DEFAULT_TOPIC = {
+      id: 'default',
+      name: 'Yeni Mövzu Yarat',
+      systemPrompt: 'Lütfən soldan "Yeni Mövzu Yarat" düyməsinə basaraq bir AI şəxsiyyəti təyin edin.',
+      isPlaceholder: true
+    };
 
-    async function initializeFirebase() {
+    /* -------------------------
+       UI element references
+       ------------------------- */
+    const appEl = document.getElementById('app');
+    const sidebarEl = document.getElementById('sidebar');
+    const topicsNav = document.getElementById('topics-nav');
+    const topicsNavMobile = document.getElementById('topics-nav-mobile');
+    const chatMessagesEl = document.getElementById('chat-messages');
+    const headerTitle = document.getElementById('header-title');
+    const headerSub = document.getElementById('header-sub');
+    const topicCountEl = document.getElementById('topic-count');
+
+    /* -------------------------
+       Local Storage helpers
+       ------------------------- */
+    function loadState() {
       try {
-        if (Object.keys(firebaseConfig).length === 0) {
-          console.warn("Firebase yapılandırması eksik.");
-          return;
-        }
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        setLogLevel('debug');
-
-        await signInAnonymously(auth);
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            userId = user.uid;
-            userIdDisplay.textContent = `Kullanıcı ID: ${userId}`;
-          }
-        });
+        const savedTopics = JSON.parse(localStorage.getItem(TOPICS_KEY));
+        topics = Array.isArray(savedTopics) ? savedTopics : [];
       } catch (e) {
-        console.error("Firebase hata:", e);
+        console.error('topics parse error', e);
+        topics = [];
+      }
+
+      const savedActive = localStorage.getItem(ACTIVE_TOPIC_KEY);
+      if (savedActive && topics.some(t => t.id === savedActive)) {
+        activeTopicId = savedActive;
+      } else {
+        activeTopicId = topics.length ? topics[0].id : DEFAULT_TOPIC.id;
+      }
+
+      loadMessages(activeTopicId);
+    }
+
+    function saveTopics() {
+      localStorage.setItem(TOPICS_KEY, JSON.stringify(topics));
+      if (activeTopicId) localStorage.setItem(ACTIVE_TOPIC_KEY, activeTopicId);
+      updateTopicCount();
+    }
+
+    function loadMessages(topicId) {
+      if (!topicId || topicId === DEFAULT_TOPIC.id) { messages = []; return; }
+      try {
+        const saved = JSON.parse(localStorage.getItem(MESSAGE_PREFIX + topicId));
+        messages = Array.isArray(saved) ? saved : [];
+      } catch (e) {
+        console.error('messages parse error', e);
+        messages = [];
       }
     }
 
-    function showMessage(text, isError = true) {
-      messageBox.classList.remove('hidden');
-      messageBox.textContent = text;
-      messageBox.className = isError
-        ? "fixed top-4 left-1/2 -translate-x-1/2 bg-error-red text-white px-6 py-3 rounded shadow"
-        : "fixed top-4 left-1/2 -translate-x-1/2 bg-primary-blue text-white px-6 py-3 rounded shadow";
-      setTimeout(() => messageBox.classList.add('hidden'), 3000);
+    function saveMessages() {
+      if (!activeTopicId || activeTopicId === DEFAULT_TOPIC.id) return;
+      localStorage.setItem(MESSAGE_PREFIX + activeTopicId, JSON.stringify(messages));
     }
 
-    dropzone.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'application/pdf';
-      input.onchange = e => {
-        if (e.target.files.length > 0) openPDF(e.target.files[0]);
+    function updateTopicCount() {
+      topicCountEl.textContent = topics.length;
+    }
+
+    function getActiveTopic() {
+      return topics.find(t => t.id === activeTopicId) || DEFAULT_TOPIC;
+    }
+
+    /* -------------------------
+       Rendering topics navigation
+       ------------------------- */
+    function renderTopicsNav() {
+      // desktop
+      topicsNav.innerHTML = '';
+      topicsNavMobile.innerHTML = '';
+
+      if (topics.length === 0) {
+        topicsNav.innerHTML = '<p class="text-center text-gray-400 p-6">Hələ mövzu yaradılmayıb.</p>';
+        topicsNavMobile.innerHTML = topicsNav.innerHTML;
+        updateTopicCount();
+        return;
+      }
+
+      topics.forEach(topic => {
+        const isActive = topic.id === activeTopicId;
+        // desktop item
+        const item = document.createElement('div');
+        item.className = 'flex items-center';
+        item.innerHTML = `
+          <button class="flex-1 text-left p-3 rounded-l-md ${isActive ? 'bg-indigo-700 text-white font-semibold' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'}">${escapeHtml(topic.name)}</button>
+          <button class="${isActive ? 'bg-indigo-800 text-red-300' : 'bg-gray-600 text-red-400 hover:bg-red-600'} p-3 rounded-r-md" title="Sil">${trashIcon()}</button>
+        `;
+        // click handlers
+        item.querySelector('button:nth-child(1)').onclick = () => setActiveTopic(topic.id);
+        item.querySelector('button:nth-child(2)').onclick = () => handleDeleteTopic(topic.id);
+        topicsNav.appendChild(item);
+
+        // mobile clone
+        const mItem = item.cloneNode(true);
+        mItem.querySelector('button:nth-child(1)').onclick = () => {
+          setActiveTopic(topic.id);
+          closeSidebarMobile();
+        };
+        mItem.querySelector('button:nth-child(2)').onclick = () => {
+          handleDeleteTopic(topic.id);
+          closeSidebarMobile();
+        };
+        topicsNavMobile.appendChild(mItem);
+      });
+
+      updateTopicCount();
+    }
+
+    function trashIcon() {
+      return `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+    }
+
+    /* -------------------------
+       Topic CRUD
+       ------------------------- */
+    function openNewTopicModal() {
+      document.getElementById('topic-name-input').value = '';
+      document.getElementById('system-prompt-input').value = '';
+      document.getElementById('modal-error').classList.add('hidden');
+      document.getElementById('new-topic-modal').classList.remove('hidden');
+    }
+    function closeNewTopicModal() {
+      document.getElementById('new-topic-modal').classList.add('hidden');
+    }
+
+    function handleSaveNewTopic() {
+      const name = document.getElementById('topic-name-input').value.trim();
+      const prompt = document.getElementById('system-prompt-input').value.trim();
+      const err = document.getElementById('modal-error');
+
+      if (!name || !prompt) {
+        err.textContent = 'Hər iki sahə doldurulmalıdır.';
+        err.classList.remove('hidden');
+        return;
+      }
+      err.classList.add('hidden');
+
+      const formatRestriction = ' Cavablarını sadə mətndə və ya tələb edilərsə Markdown kod bloklarında (```language\\ncode\\n```) ver. Ulduz (*), qalın şrift (**) və ya xətt (---) kimi digər formatlaşdırmalardan çəkin.';
+
+      const topic = {
+        id: cryptoRandomId(),
+        name,
+        systemPrompt: prompt + formatRestriction,
+        isPlaceholder: false
       };
-      input.click();
-    });
 
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('bg-light-blue'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('bg-light-blue'));
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropzone.classList.remove('bg-light-blue');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type === 'application/pdf') openPDF(file);
-      else showMessage('Geçerli bir PDF dosyası yükleyin.');
-    });
+      topics.unshift(topic);
+      activeTopicId = topic.id;
+      saveTopics();
+      loadMessages(activeTopicId);
+      saveMessages();
+      closeNewTopicModal();
+      renderAll();
+    }
 
-    async function openPDF(file) {
+    function handleDeleteTopic(id) {
+      const t = topics.find(x => x.id === id);
+      if (!t) return;
+      if (!confirm(`'${t.name}' mövzusunu və bütün söhbət keçmişini silmək istədiyinizə əminsiniz?`)) return;
+      topics = topics.filter(x => x.id !== id);
+      localStorage.removeItem(MESSAGE_PREFIX + id);
+      if (topics.length) activeTopicId = topics[0].id;
+      else activeTopicId = DEFAULT_TOPIC.id;
+      saveTopics();
+      loadMessages(activeTopicId);
+      renderAll();
+    }
+
+    function clearAllTopics() {
+      if (!confirm('Bütün mövzuları və mesajları silmək istədiyinizə əminsiniz?')) return;
+      topics.forEach(t => localStorage.removeItem(MESSAGE_PREFIX + t.id));
+      topics = [];
+      activeTopicId = DEFAULT_TOPIC.id;
+      saveTopics();
+      loadMessages(activeTopicId);
+      renderAll();
+    }
+
+    /* -------------------------
+       Chat rendering & helpers
+       ------------------------- */
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    }
+
+    function renderMessages() {
+      chatMessagesEl.innerHTML = '';
+      const activeTopic = getActiveTopic();
+      headerTitle.textContent = activeTopic?.name ?? DEFAULT_TOPIC.name;
+      headerSub.textContent = (activeTopic?.systemPrompt ?? DEFAULT_TOPIC.systemPrompt).slice(0, 70) + (activeTopic?.systemPrompt?.length > 70 ? '...' : '');
+
+      if (!messages || messages.length === 0) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'flex flex-col items-center justify-center text-center text-gray-400 h-64';
+        placeholder.innerHTML = `
+          <div class="text-indigo-400 mb-3">${botIconLarge()}</div>
+          <div class="font-bold text-indigo-700 mb-1">${activeTopic.name} hazırdır</div>
+          <div class="text-sm">${activeTopic.isPlaceholder ? 'Yeni mövzu yaradın.' : 'AI-nıza ilk sualı verin.'}</div>
+        `;
+        chatMessagesEl.appendChild(placeholder);
+        return;
+      }
+
+      messages.forEach(msg => {
+        const el = createMessageElement(msg);
+        chatMessagesEl.appendChild(el);
+      });
+
+      // append anchor to scroll to
+      const anchor = document.createElement('div');
+      anchor.id = 'chat-end';
+      chatMessagesEl.appendChild(anchor);
+      anchor.scrollIntoView({behavior: 'smooth'});
+    }
+
+    function createMessageElement(message) {
+      const isUser = message.role === 'user';
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex ${isUser ? 'justify-end' : 'justify-start'} fade-in`;
+
+      const box = document.createElement('div');
+      box.className = `max-w-[88%] md:max-w-[70%] shadow ${isUser ? 'bg-indigo-600 text-white rounded-2xl p-4' : 'bg-white text-gray-800 rounded-2xl p-4'}`;
+
+      if (!isUser) {
+        const header = document.createElement('div');
+        header.className = 'flex items-center gap-2 text-sm text-indigo-600 mb-2';
+        header.innerHTML = `${botIconSmall()}<span class="font-semibold">AI Mütəxəssis</span>`;
+        box.appendChild(header);
+      }
+
+      // split code blocks
+      const text = message.text || '';
+      const codeRegex = /```([\s\S]*?)```/g;
+      let lastIndex = 0;
+      let m;
+      const container = document.createElement('div');
+
+      while ((m = codeRegex.exec(text)) !== null) {
+        const before = text.substring(lastIndex, m.index).trim();
+        if (before) {
+          const p = document.createElement('p');
+          p.className = 'whitespace-pre-wrap mb-2';
+          p.textContent = before;
+          container.appendChild(p);
+        }
+        const codeContent = m[1].trim();
+        const codeBlock = createCodeBlock(codeContent);
+        container.appendChild(codeBlock);
+        lastIndex = m.index + m[0].length;
+      }
+
+      const remaining = text.substring(lastIndex).trim();
+      if (remaining) {
+        const p = document.createElement('p');
+        p.className = 'whitespace-pre-wrap';
+        p.textContent = remaining;
+        container.appendChild(p);
+      }
+
+      box.appendChild(container);
+      wrapper.appendChild(box);
+      return wrapper;
+    }
+
+    function createCodeBlock(rawContent) {
+      const lines = rawContent.split('\n');
+      // optional first-line language: "js:" or "python:"
+      let lang = '';
+      if (lines[0].includes(':') && lines[0].trim().length < 20 && lines[0].includes(':')) {
+        const maybeLang = lines[0].split(':')[0].trim().toLowerCase();
+        if (maybeLang.match(/^[a-z]+$/)) {
+          lang = maybeLang;
+          lines.shift();
+        }
+      }
+      const code = lines.join('\n');
+
+      const block = document.createElement('div');
+      block.className = 'bg-gray-900 text-gray-100 rounded-lg overflow-hidden my-2 border border-gray-800';
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between px-3 py-2 bg-gray-800 text-xs text-gray-300';
+      head.innerHTML = `<div class="font-semibold">${lang ? lang.toUpperCase() : 'CODE'}</div>`;
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'text-xs px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700';
+      copyBtn.innerHTML = 'Kopyala';
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(code);
+          copyBtn.innerHTML = 'Kopyalandı';
+          copyBtn.classList.remove('bg-indigo-600');
+          copyBtn.classList.add('bg-green-600');
+          setTimeout(()=> { copyBtn.innerHTML = 'Kopyala'; copyBtn.classList.remove('bg-green-600'); copyBtn.classList.add('bg-indigo-600'); }, 1500);
+        } catch (e) { console.error(e); }
+      };
+      head.appendChild(copyBtn);
+      block.appendChild(head);
+
+      const pre = document.createElement('pre');
+      pre.className = 'whitespace-pre-wrap p-3 text-sm overflow-x-auto';
+      pre.textContent = code;
+      block.appendChild(pre);
+      return block;
+    }
+
+    function botIconLarge() {
+      return `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 9h8M8 13h8M8 17h8"/></svg>`;
+    }
+    function botIconSmall() {
+      return `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`;
+    }
+
+    /* -------------------------
+       Sending messages / API
+       ------------------------- */
+    async function fetchGemini(payload, attempt = 0) {
+      const maxAttempts = 4;
+      if (!API_KEY) {
+        // simulate a small delay and return a canned response for testing
+        await new Promise(r => setTimeout(r, 600));
+        return { candidates: [{ content: { parts: [{ text: `Simulyasiya cavabı: ${payload.contents?.slice(-1)[0]?.parts?.[0]?.text?.slice(0,200) || '...'}` }] } }] };
+      }
+
       try {
-        loadingText.classList.remove('hidden');
-        const reader = new FileReader();
-        const pdfData = await new Promise((resolve, reject) => {
-          reader.onload = e => resolve(new Uint8Array(e.target.result));
-          reader.onerror = reject;
-          reader.readAsArrayBuffer(file);
+        const url = `${API_URL}?key=${API_KEY}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
-        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-        pdfRenderer.innerHTML = '';
-        dropzone.classList.add('hidden');
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.2 });
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          canvas.className = "pdf-page-canvas";
-          pdfRenderer.appendChild(canvas);
+        if (!res.ok) {
+          const body = await res.json().catch(()=> ({}));
+          if (res.status === 429 && attempt < maxAttempts) {
+            const wait = Math.pow(2, attempt) * 1000 + Math.random()*1000;
+            await new Promise(r=>setTimeout(r, wait));
+            return fetchGemini(payload, attempt+1);
+          }
+          throw new Error(`API Error ${res.status}: ${body.error?.message || res.statusText}`);
         }
+        return await res.json();
+      } catch (err) {
+        console.error('fetchGemini error', err);
+        throw err;
+      }
+    }
 
-        pdfRenderer.classList.remove('hidden');
-        backButton.classList.remove('hidden');
-        loadingText.classList.add('hidden');
-        showMessage("PDF başarıyla yüklendi.", false);
+    async function sendMessage(evt) {
+      evt.preventDefault();
+      const inputEl = document.getElementById('chat-input');
+      const text = inputEl.value.trim();
+      const activeTopic = getActiveTopic();
+
+      if (!text || isLoading) return;
+
+      if (activeTopic.isPlaceholder) {
+        messages = [{ role: 'model', text: 'Lütfən əvvəlcə yeni AI mövzusu yaradın.' }];
+        inputEl.value = '';
+        renderMessages();
+        return;
+      }
+
+      // push user message
+      messages.push({ role: 'user', text });
+      saveMessages();
+      renderMessages();
+      inputEl.value = '';
+      setLoading(true);
+
+      // prepare payload
+      const history = messages.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
+      const payload = {
+        contents: history,
+        systemInstruction: { parts: [{ text: activeTopic.systemPrompt || DEFAULT_TOPIC.systemPrompt }] }
+      };
+
+      try {
+        const res = await fetchGemini(payload);
+        const candidate = res?.candidates?.[0];
+        let aiText = 'Bağışlayın, cavab alınmadı.';
+        if (candidate && candidate.content?.parts?.[0]?.text) {
+          aiText = candidate.content.parts[0].text;
+        } else if (candidate?.finishReason === 'SAFETY') {
+          aiText = 'Bu məzmun təhlükəsizlik səbəbindən bloklandı.';
+        }
+        messages.push({ role: 'model', text: aiText });
+        saveMessages();
+        renderMessages();
       } catch (err) {
         console.error(err);
-        showMessage("PDF yüklenemedi!", true);
+        messages.push({ role: 'model', text: `XƏTA: ${err.message || 'AI ilə əlaqə qurulmadı'}` });
+        saveMessages();
+        renderMessages();
+      } finally {
+        setLoading(false);
       }
     }
 
-    window.closePDF = function() {
-      pdfRenderer.innerHTML = '';
-      pdfRenderer.classList.add('hidden');
-      dropzone.classList.remove('hidden');
-      backButton.classList.add('hidden');
+    function setLoading(state) {
+      isLoading = state;
+      const inputEl = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-button');
+      inputEl.disabled = state;
+      sendBtn.disabled = state || !inputEl.value.trim();
+      const icon = document.getElementById('send-icon');
+      if (state) {
+        icon.innerHTML = `<div class="animate-spin rounded-full border-2 border-white border-t-transparent w-5 h-5"></div>`;
+      } else {
+        icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>`;
+      }
     }
 
-    historyButton.addEventListener('click', () => historyPanel.classList.add('open'));
-    historyOverlay.addEventListener('click', () => historyPanel.classList.remove('open'));
-    window.onload = initializeFirebase;
+    /* -------------------------
+       Utility
+       ------------------------- */
+    function cryptoRandomId() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'id-' + Math.random().toString(36).slice(2, 9);
+    }
+
+    /* -------------------------
+       Layout / misc handlers
+       ------------------------- */
+    function renderAll() {
+      renderTopicsNav();
+      renderMessages();
+    }
+
+    function setActiveTopic(id) {
+      if (activeTopicId === id) return;
+      activeTopicId = id;
+      loadMessages(id);
+      saveTopics();
+      renderAll();
+    }
+
+    // mobile sidebar toggles
+    function openSidebarMobile() {
+      document.getElementById('sidebar-mobile').classList.remove('-translate-x-full');
+      document.getElementById('overlay').classList.remove('hidden');
+      isSidebarOpenMobile = true;
+    }
+    function closeSidebarMobile() {
+      document.getElementById('sidebar-mobile').classList.add('-translate-x-full');
+      document.getElementById('overlay').classList.add('hidden');
+      isSidebarOpenMobile = false;
+    }
+
+    /* -------------------------
+       Initialization
+       ------------------------- */
+    function init() {
+      // load saved state
+      loadState();
+
+      // bind buttons
+      document.getElementById('btn-new-topic').onclick = openNewTopicModal;
+      document.getElementById('btn-new-topic-mobile').onclick = () => { openNewTopicModal(); closeSidebarMobile(); };
+      document.getElementById('modal-close').onclick = closeNewTopicModal;
+      document.getElementById('modal-cancel').onclick = closeNewTopicModal;
+      document.getElementById('modal-save').onclick = handleSaveNewTopic;
+      document.getElementById('btn-toggle-sidebar').onclick = () => openSidebarMobile();
+      document.getElementById('btn-close-sidebar-mobile').onclick = () => closeSidebarMobile();
+      document.getElementById('overlay').onclick = () => closeSidebarMobile();
+      document.getElementById('btn-clear-topics').onclick = clearAllTopics;
+
+      // form
+      const form = document.getElementById('chat-form');
+      form.addEventListener('submit', sendMessage);
+      const input = document.getElementById('chat-input');
+      input.addEventListener('input', () => {
+        document.getElementById('send-button').disabled = isLoading || !input.value.trim();
+      });
+
+      // keyboard: Enter to send (but avoid when IME active)
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!isLoading && input.value.trim()) sendMessage(new Event('submit', {cancelable:true}));
+        }
+      });
+
+      // initial render
+      renderAll();
+    }
+
+    // run
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>
